@@ -17,7 +17,7 @@ import InfluencerManagement from './pages/influencers/InfluencerManagement';
 import Settings from './pages/settings/Settings';
 import ContentModeration from './pages/content/ContentModeration';
 import Analytics from './pages/analytics/Analytics';
-
+import Profile from './pages/profile/Profile';
 // Auth Context and Protected Route
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -51,7 +51,7 @@ function App() {
             <Route path="content-moderation" element={<ContentModeration />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
-            
+            <Route path="profile" element={<Profile />} />
           </Route>
         </Routes>
       </AuthProvider>

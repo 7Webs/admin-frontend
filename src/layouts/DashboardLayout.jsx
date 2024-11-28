@@ -105,6 +105,11 @@ const DashboardLayout = () => {
     setAnchorEl(null);
   };
 
+  const handleProfile = () => {
+    handleMenuClose();
+    navigate('/profile');
+  };
+
   const handleLogout = () => {
     // Add logout logic here
     handleMenuClose();
@@ -153,7 +158,7 @@ const DashboardLayout = () => {
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
             >
-              <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
+              <MenuItem onClick={handleProfile}>Profile</MenuItem>
               <MenuItem onClick={handleLogout}>Logout</MenuItem>
             </Menu>
           </div>
