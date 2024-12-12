@@ -8,10 +8,6 @@ import {
   Typography,
   InputAdornment,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Alert,
   CircularProgress,
 } from '@mui/material';
@@ -21,15 +17,15 @@ import {
   Lock as LockIcon,
   Email as EmailIcon,
 } from '@mui/icons-material';
+import { useAuth } from '../../utils/contexts/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [twoFactorCode, setTwoFactorCode] = useState('');
-  const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -37,31 +33,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // TODO: Implement actual login API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simulate successful first-factor authentication
-      setShowTwoFactor(true);
-      setLoading(false);
+      await login(email, password);
+      window.location.href = '/';
     } catch (err) {
       setError('Invalid credentials. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const handleTwoFactorSubmit = async () => {
-    setError('');
-    setLoading(true);
-
-    try {
-      // TODO: Implement actual 2FA verification API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simulate successful 2FA verification
-      // Redirect to dashboard
-      window.location.href = '/dashboard';
-    } catch (err) {
-      setError('Invalid 2FA code. Please try again.');
       setLoading(false);
     }
   };
@@ -155,40 +130,6 @@ const Login = () => {
           </form>
         </CardContent>
       </Card>
-
-      {/* 2FA Dialog */}
-      <Dialog open={showTwoFactor} maxWidth="xs" fullWidth>
-        <DialogTitle>Two-Factor Authentication</DialogTitle>
-        <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            Please enter the verification code sent to your email.
-          </Typography>
-          <TextField
-            fullWidth
-            label="Verification Code"
-            variant="outlined"
-            value={twoFactorCode}
-            onChange={(e) => setTwoFactorCode(e.target.value)}
-            margin="normal"
-            required
-            autoComplete="off"
-            inputProps={{
-              maxLength: 6,
-              style: { letterSpacing: '0.5em', textAlign: 'center' },
-            }}
-          />
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 3 }}>
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={handleTwoFactorSubmit}
-            disabled={loading || twoFactorCode.length !== 6}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Verify'}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

@@ -73,7 +73,7 @@ const statusColors = {
   rejected: 'error',
 };
 
-const ContentModeration = () => {
+const CouponManagement = () => {
   const [currentTab, setCurrentTab] = useState(0);
   const [selectedContent, setSelectedContent] = useState(null);
   const [reviewDialog, setReviewDialog] = useState(false);
@@ -294,4 +294,4 @@ const ContentModeration = () => {
   );
 };
 
-export default ContentModeration;
+export default CouponManagement;

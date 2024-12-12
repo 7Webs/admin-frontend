@@ -14,9 +14,13 @@
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.15.6",
     "@mui/material": "^5.15.6",
+    "axios": "^1.7.9",
+    "firebase": "^11.0.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-router-dom": "^6.21.3"
+    "react-lottie": "^1.2.10",
+    "react-router-dom": "^6.21.3",
+    "react-toastify": "^10.0.6"
   },
   "devDependencies": {
     "@types/react": "^18.2.48",

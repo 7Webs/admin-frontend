@@ -28,6 +28,7 @@ import {
   AccountCircle as AccountCircleIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+import { useAuth } from '../../utils/contexts/AuthContext';
 
 const drawerWidth = 240;
 
@@ -78,7 +79,7 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 const menuItems = [
   { text: 'Vendors', icon: <StoreIcon />, path: '/vendors' },
   { text: 'Influencers', icon: <PeopleIcon />, path: '/influencers' },
-  { text: 'Content Moderation', icon: <ContentIcon />, path: '/content-moderation' },
+  { text: 'Content Moderation', icon: <ContentIcon />, path: '/coupons' },
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
@@ -88,7 +89,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const [open, setOpen] = useState(true);
   const [anchorEl, setAnchorEl] = useState(null);
-
+  const { logout } = useAuth();
   const handleDrawerOpen = () => {
     setOpen(true);
   };
@@ -110,8 +111,8 @@ const DashboardLayout = () => {
     navigate('/profile');
   };
 
-  const handleLogout = () => {
-    // Add logout logic here
+  const handleLogout = async () => {
+    await logout();
     handleMenuClose();
     navigate('/login');
   };

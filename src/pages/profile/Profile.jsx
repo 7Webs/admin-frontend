@@ -1,16 +1,28 @@
 import { useState } from 'react';
-import { Box, Typography, TextField, Button, Paper, Avatar } from '@mui/material';
-import { useAuth } from '../../contexts/AuthContext';
+import {
+  Box,
+  Card,
+  CardContent,
+  TextField,
+  Button,
+  Typography,
+  Grid,
+  Avatar,
+  CircularProgress,
+} from '@mui/material';
+import { useAuth } from '../../utils/contexts/AuthContext';
 
 const Profile = () => {
-  const { user } = useAuth();
-  const [editMode, setEditMode] = useState(false);
+  const { user, updateUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
-    email: user?.email || ''
+    email: user?.email || '',
+    phone: user?.phone || '',
   });
 
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -18,74 +30,115 @@ const Profile = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Here you would typically make an API call to update the user profile
-    setEditMode(false);
+  const handleEdit = async () => {
+    if (isEditing) {
+      setLoading(true);
+      try {
+        await updateUser(formData);
+        console.log('Saving profile:', formData);
+      } finally {
+        setLoading(false);
+      }
+    }
+    setIsEditing(!isEditing);
   };
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto', mt: 4 }}>
-      <Paper sx={{ p: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
-          <Avatar
-            sx={{ width: 80, height: 80, mr: 3 }}
-            src={user?.avatar}
-          >
-            {user?.name?.charAt(0)}
-          </Avatar>
-          <Typography variant="h4">Profile</Typography>
-        </Box>
+    <Box sx={{ p: 3, maxWidth: 800, mx: 'auto' }}>
+      <Card>
+        <CardContent>
+          <Box sx={{ textAlign: 'center', mb: 4 }}>
+            <Avatar
+              sx={{
+                width: 100,
+                height: 100,
+                mx: 'auto',
+                mb: 2,
+                bgcolor: 'primary.main',
+                fontSize: '2rem',
+              }}
+            >
+              {user?.name?.charAt(0) || 'U'}
+            </Avatar>
+            <Typography variant="h4" gutterBottom>
+              Profile Details
+            </Typography>
+          </Box>
 
-        <form onSubmit={handleSubmit}>
-          <TextField
-            fullWidth
-            label="Name"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            disabled={!editMode}
-            margin="normal"
-          />
-          <TextField
-            fullWidth
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            disabled={!editMode}
-            margin="normal"
-          />
-          
-          <Box sx={{ mt: 3 }}>
-            {editMode ? (
-              <>
-                <Button
-                  variant="contained"
-                  type="submit"
-                  sx={{ mr: 2 }}
-                >
-                  Save Changes
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setEditMode(false)}
-                >
-                  Cancel
-                </Button>
-              </>
-            ) : (
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                disabled={!isEditing || loading}
+                variant="outlined"
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                disabled={!isEditing || loading}
+                variant="outlined"
+                margin="normal"
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                disabled={!isEditing || loading}
+                variant="outlined"
+                margin="normal"
+              />
+            </Grid>
+          </Grid>
+
+          <Box sx={{ mt: 4, textAlign: 'center' }}>
+            <Button
+              variant="contained"
+              color={isEditing ? "success" : "primary"}
+              onClick={handleEdit}
+              disabled={loading}
+              sx={{ minWidth: 120 }}
+            >
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                isEditing ? 'Save' : 'Edit Profile'
+              )}
+            </Button>
+            {isEditing && (
               <Button
-                variant="contained"
-                onClick={() => setEditMode(true)}
+                variant="outlined"
+                color="error"
+                onClick={() => {
+                  setIsEditing(false);
+                  setFormData({
+                    name: user?.name || '',
+                    email: user?.email || '',
+                    phone: user?.phone || '',
+                  });
+                }}
+                disabled={loading}
+                sx={{ ml: 2, minWidth: 120 }}
               >
-                Edit Profile
+                Cancel
               </Button>
             )}
           </Box>
-        </form>
-      </Paper>
+        </CardContent>
+      </Card>
     </Box>
   );
 };
