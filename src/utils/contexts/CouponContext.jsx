@@ -14,6 +14,7 @@ export const CouponProvider = ({ children }) => {
         const fetchCoupons = async () => {
             try {
                 const response = await apiService.get(`deals/top-deals?take=100&skip=0`);
+                console.log(response.data);
                 setCoupons(response.data);
             } catch (error) {
                 console.error("Error fetching coupons:", error);

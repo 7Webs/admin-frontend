@@ -24,6 +24,7 @@ import {
   Grid,
   Tab,
   Tabs,
+  Avatar,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -34,60 +35,16 @@ import {
   CheckCircle as CheckCircleIcon,
   Warning as WarningIcon,
 } from '@mui/icons-material';
-
-// Mock vendor data
-const mockVendors = [
-  {
-    id: 1,
-    name: 'Fashion Nova',
-    email: 'partner@fashionnova.com',
-    status: 'active',
-    subscriptionTier: 'premium',
-    totalCoupons: 150,
-    activeInfluencers: 45,
-    totalRevenue: 25000,
-    lastPayment: '2024-01-15',
-    joinDate: '2023-06-01',
-  },
-  {
-    id: 2,
-    name: 'BeautyGlow',
-    email: 'partners@beautyglow.com',
-    status: 'pending',
-    subscriptionTier: 'basic',
-    totalCoupons: 50,
-    activeInfluencers: 12,
-    totalRevenue: 8000,
-    lastPayment: '2024-01-10',
-    joinDate: '2023-09-15',
-  },
-  {
-    id: 3,
-    name: 'FitLife',
-    email: 'business@fitlife.com',
-    status: 'suspended',
-    subscriptionTier: 'premium',
-    totalCoupons: 200,
-    activeInfluencers: 0,
-    totalRevenue: 15000,
-    lastPayment: '2023-12-28',
-    joinDate: '2023-05-20',
-  },
-];
-
+import { useShop } from '../../utils/contexts/ShopContext';
+import AnimatedLoader from '../../components/loaders/AnimatedLoader';
 const statusColors = {
   active: 'success',
   pending: 'warning',
   suspended: 'error',
 };
 
-const subscriptionColors = {
-  basic: 'info',
-  premium: 'secondary',
-  enterprise: 'primary',
-};
-
 const VendorManagement = () => {
+  const { shops, loading } = useShop();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -121,12 +78,16 @@ const VendorManagement = () => {
     setCurrentTab(newValue);
   };
 
-  const filteredVendors = mockVendors.filter((vendor) => {
+  const filteredVendors = shops.filter((vendor) => {
     const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vendor.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || vendor.status === selectedStatus;
+      vendor.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || vendor.subscriptionState === selectedStatus;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return <AnimatedLoader />;
+  }
 
   return (
     <Box>
@@ -175,13 +136,6 @@ const VendorManagement = () => {
           >
             Pending
           </Button>
-          <Button
-            variant={selectedStatus === 'suspended' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('suspended')}
-            color="error"
-          >
-            Suspended
-          </Button>
         </Grid>
       </Grid>
 
@@ -193,10 +147,9 @@ const VendorManagement = () => {
               <TableRow>
                 <TableCell>Vendor Name</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Subscription</TableCell>
-                <TableCell align="right">Active Influencers</TableCell>
-                <TableCell align="right">Total Revenue</TableCell>
-                <TableCell align="right">Last Payment</TableCell>
+                <TableCell>Category</TableCell>
+                <TableCell>Subscription Plan</TableCell>
+                <TableCell>Created At</TableCell>
                 <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -204,30 +157,32 @@ const VendorManagement = () => {
               {filteredVendors.map((vendor) => (
                 <TableRow key={vendor.id}>
                   <TableCell>
-                    <Box>
-                      <Typography variant="subtitle2">{vendor.name}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {vendor.email}
-                      </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Avatar
+                        src={vendor.logo}
+                        alt={vendor.name}
+                        sx={{ width: 40, height: 40, mr: 2 }}
+                      >
+                        {vendor.name?.charAt(0)}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="subtitle2">{vendor.name}</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {vendor.email}
+                        </Typography>
+                      </Box>
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={vendor.status}
-                      color={statusColors[vendor.status]}
+                      label={vendor.subscriptionState || 'pending'}
+                      color={statusColors[vendor.subscriptionState] || 'warning'}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={vendor.subscriptionTier}
-                      color={subscriptionColors[vendor.subscriptionTier]}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">{vendor.activeInfluencers}</TableCell>
-                  <TableCell align="right">${vendor.totalRevenue.toLocaleString()}</TableCell>
-                  <TableCell align="right">{new Date(vendor.lastPayment).toLocaleDateString()}</TableCell>
+                  <TableCell>{vendor.category?.name}</TableCell>
+                  <TableCell>{vendor.activeSubscriptionPlan?.name || 'No Plan'}</TableCell>
+                  <TableCell>{new Date(vendor.createdAt).toLocaleDateString()}</TableCell>
                   <TableCell align="center">
                     <IconButton onClick={(e) => handleMenuOpen(e, vendor)}>
                       <MoreVertIcon />
@@ -270,18 +225,28 @@ const VendorManagement = () => {
         {selectedVendor && (
           <>
             <DialogTitle>
-              <Typography variant="h6">
-                {selectedVendor.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Member since {new Date(selectedVendor.joinDate).toLocaleDateString()}
-              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Avatar
+                  src={selectedVendor.logo}
+                  alt={selectedVendor.name}
+                  sx={{ width: 60, height: 60 }}
+                >
+                  {selectedVendor.name?.charAt(0)}
+                </Avatar>
+                <Box>
+                  <Typography variant="h6">
+                    {selectedVendor.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Member since {new Date(selectedVendor.createdAt).toLocaleDateString()}
+                  </Typography>
+                </Box>
+              </Box>
             </DialogTitle>
             <DialogContent>
               <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 3 }}>
                 <Tab label="Overview" />
                 <Tab label="Payment History" />
-                <Tab label="Influencers" />
                 <Tab label="Analytics" />
               </Tabs>
 
@@ -291,10 +256,10 @@ const VendorManagement = () => {
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" color="text.secondary">
-                          Total Revenue
+                          Category
                         </Typography>
                         <Typography variant="h5">
-                          ${selectedVendor.totalRevenue.toLocaleString()}
+                          {selectedVendor.category?.name}
                         </Typography>
                       </CardContent>
                     </Card>
@@ -303,50 +268,36 @@ const VendorManagement = () => {
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" color="text.secondary">
-                          Active Influencers
+                          Subscription Plan
                         </Typography>
                         <Typography variant="h5">
-                          {selectedVendor.activeInfluencers}
+                          {selectedVendor.activeSubscriptionPlan?.name || 'No Plan'}
                         </Typography>
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={12} sm={6}>
+                  <Grid item xs={12}>
                     <Card variant="outlined">
                       <CardContent>
                         <Typography variant="body2" color="text.secondary">
-                          Total Coupons
+                          Description
                         </Typography>
-                        <Typography variant="h5">
-                          {selectedVendor.totalCoupons}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Subscription Tier
-                        </Typography>
-                        <Typography variant="h5">
-                          {selectedVendor.subscriptionTier}
+                        <Typography variant="body1">
+                          {selectedVendor.description}
                         </Typography>
                       </CardContent>
                     </Card>
                   </Grid>
                 </Grid>
               )}
-
-              {/* Add content for other tabs */}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setDetailsDialog(false)}>Close</Button>
               <Button
                 variant="contained"
-                color={selectedVendor.status === 'suspended' ? 'success' : 'error'}
+                color={selectedVendor.approved ? 'error' : 'success'}
               >
-                {selectedVendor.status === 'suspended' ? 'Reactivate Account' : 'Suspend Account'}
+                {selectedVendor.approved ? 'Suspend Account' : 'Approve Account'}
               </Button>
             </DialogActions>
           </>
