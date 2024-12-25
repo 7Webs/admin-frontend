@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
-  CardContent,
   Typography,
   Table,
   TableBody,
@@ -17,43 +17,94 @@ import {
   InputAdornment,
   Menu,
   MenuItem,
+  Grid,
+  Avatar,
+  CircularProgress,
   Dialog,
   DialogTitle,
-  DialogContent,
   DialogActions,
-  Grid,
-  Tab,
-  Tabs,
-  Avatar,
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  FilterList as FilterIcon,
   MoreVert as MoreVertIcon,
   Visibility as VisibilityIcon,
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
 } from '@mui/icons-material';
-import { useShop } from '../../utils/contexts/ShopContext';
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { apiService } from "../../api/apiwrapper";
 import AnimatedLoader from '../../components/loaders/AnimatedLoader';
-const statusColors = {
-  active: 'success',
-  pending: 'warning',
-  suspended: 'error',
-};
+import { toast } from 'react-toastify';
 
 const VendorManagement = () => {
-  const { shops, loading } = useShop();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedVendor, setSelectedVendor] = useState(null);
-  const [detailsDialog, setDetailsDialog] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
-  const [currentTab, setCurrentTab] = useState(0);
+  const loadMoreRef = useRef(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    action: null
+  });
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    isLoading,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ["shops", searchQuery],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await apiService.get(
+        `admin/shops?take=10&skip=${pageParam}${searchQuery ? `&search=${searchQuery}` : ''}`
+      );
+      return response.data;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 10 ? allPages.length * 10 : undefined;
+    },
+  });
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0.1,
+      }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allShops = data?.pages.flat() || [];
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
+  };
+
+  const handleSearchSubmit = () => {
+    setSearchQuery(searchTerm);
   };
 
   const handleStatusFilter = (status) => {
@@ -70,22 +121,51 @@ const VendorManagement = () => {
   };
 
   const handleViewDetails = () => {
-    setDetailsDialog(true);
+    navigate(`/vendors/${selectedVendor.id}`);
     handleMenuClose();
   };
 
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
+  const handleApprove = async () => {
+    try {
+      await apiService.post(`admin/shops/${selectedVendor.id}/approve`);
+      handleMenuClose();
+      setConfirmDialog({ open: false, title: '', action: null });
+      refetch();
+      toast.success('Vendor approved successfully');
+    } catch (error) {
+      console.error('Error approving vendor:', error);
+      toast.error('Error approving vendor');
+    }
   };
 
-  const filteredVendors = shops.filter((vendor) => {
-    const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || vendor.subscriptionState === selectedStatus;
-    return matchesSearch && matchesStatus;
+  const handleSuspend = async () => {
+    try {
+      await apiService.post(`admin/shops/${selectedVendor.id}/block`);
+      handleMenuClose();
+      setConfirmDialog({ open: false, title: '', action: null });
+      refetch();
+      toast.success('Vendor suspended successfully');
+    } catch (error) {
+      console.error('Error suspending vendor:', error);
+      toast.error('Error suspending vendor');
+    }
+  };
+
+  const openConfirmDialog = (title, action) => {
+    setConfirmDialog({
+      open: true,
+      title,
+      action
+    });
+  };
+
+  const filteredVendors = allShops.filter((vendor) => {
+    const vendorStatus = vendor.approved ? 'approved' : 'not approved';
+    const matchesStatus = selectedStatus === 'all' || vendorStatus === selectedStatus;
+    return matchesStatus;
   });
 
-  if (loading) {
+  if (isLoading) {
     return <AnimatedLoader />;
   }
 
@@ -98,19 +178,28 @@ const VendorManagement = () => {
       {/* Filters and Search */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={4}>
-          <TextField
-            fullWidth
-            placeholder="Search vendors..."
-            value={searchTerm}
-            onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              fullWidth
+              placeholder="Search vendors..."
+              value={searchTerm}
+              onChange={handleSearch}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearchSubmit}
+              sx={{ minWidth: '100px' }}
+            >
+              Search
+            </Button>
+          </Box>
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
           <Button
@@ -121,20 +210,20 @@ const VendorManagement = () => {
             All
           </Button>
           <Button
-            variant={selectedStatus === 'active' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('active')}
+            variant={selectedStatus === 'approved' ? 'contained' : 'outlined'}
+            onClick={() => handleStatusFilter('approved')}
             color="success"
             sx={{ mr: 1 }}
           >
-            Active
+            Approved
           </Button>
           <Button
-            variant={selectedStatus === 'pending' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('pending')}
-            color="warning"
+            variant={selectedStatus === 'not approved' ? 'contained' : 'outlined'}
+            onClick={() => handleStatusFilter('not approved')}
+            color="error"
             sx={{ mr: 1 }}
           >
-            Pending
+            Not Approved
           </Button>
         </Grid>
       </Grid>
@@ -175,8 +264,8 @@ const VendorManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={vendor.subscriptionState || 'pending'}
-                      color={statusColors[vendor.subscriptionState] || 'warning'}
+                      label={vendor.approved ? 'Approved' : 'Not Approved'}
+                      color={vendor.approved ? 'success' : 'error'}
                       size="small"
                     />
                   </TableCell>
@@ -193,6 +282,11 @@ const VendorManagement = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '20px' }}>
+          {isFetchingNextPage && <CircularProgress />}
+          {!hasNextPage && <Typography>No more vendors to load</Typography>}
+          {isFetching && !isFetchingNextPage && <CircularProgress />}
+        </div>
       </Card>
 
       {/* Action Menu */}
@@ -204,104 +298,32 @@ const VendorManagement = () => {
         <MenuItem onClick={handleViewDetails}>
           <VisibilityIcon sx={{ mr: 1 }} /> View Details
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <CheckCircleIcon sx={{ mr: 1 }} /> Approve
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <BlockIcon sx={{ mr: 1 }} /> Suspend
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <WarningIcon sx={{ mr: 1 }} /> Send Warning
-        </MenuItem>
+        {!selectedVendor?.approved && (
+          <MenuItem onClick={() => openConfirmDialog('Are you sure you want to approve this vendor?', handleApprove)}>
+            <CheckCircleIcon sx={{ mr: 1 }} /> Approve
+          </MenuItem>
+        )}
+        {selectedVendor?.approved && (
+          <MenuItem onClick={() => openConfirmDialog('Are you sure you want to suspend this vendor?', handleSuspend)}>
+            <BlockIcon sx={{ mr: 1 }} /> Suspend
+          </MenuItem>
+        )}
       </Menu>
 
-      {/* Details Dialog */}
+      {/* Confirmation Dialog */}
       <Dialog
-        open={detailsDialog}
-        onClose={() => setDetailsDialog(false)}
-        maxWidth="md"
-        fullWidth
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ open: false, title: '', action: null })}
       >
-        {selectedVendor && (
-          <>
-            <DialogTitle>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Avatar
-                  src={selectedVendor.logo}
-                  alt={selectedVendor.name}
-                  sx={{ width: 60, height: 60 }}
-                >
-                  {selectedVendor.name?.charAt(0)}
-                </Avatar>
-                <Box>
-                  <Typography variant="h6">
-                    {selectedVendor.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Member since {new Date(selectedVendor.createdAt).toLocaleDateString()}
-                  </Typography>
-                </Box>
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-                <Tab label="Overview" />
-                <Tab label="Payment History" />
-                <Tab label="Analytics" />
-              </Tabs>
-
-              {currentTab === 0 && (
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Category
-                        </Typography>
-                        <Typography variant="h5">
-                          {selectedVendor.category?.name}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Subscription Plan
-                        </Typography>
-                        <Typography variant="h5">
-                          {selectedVendor.activeSubscriptionPlan?.name || 'No Plan'}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Description
-                        </Typography>
-                        <Typography variant="body1">
-                          {selectedVendor.description}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDetailsDialog(false)}>Close</Button>
-              <Button
-                variant="contained"
-                color={selectedVendor.approved ? 'error' : 'success'}
-              >
-                {selectedVendor.approved ? 'Suspend Account' : 'Approve Account'}
-              </Button>
-            </DialogActions>
-          </>
-        )}
+        <DialogTitle>{confirmDialog.title}</DialogTitle>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog({ open: false, title: '', action: null })}>
+            Cancel
+          </Button>
+          <Button onClick={confirmDialog.action} variant="contained" color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -20,30 +20,130 @@ import {
   DialogActions,
   TextField,
   MenuItem,
+  CircularProgress,
+  Tabs,
+  Tab,
+  Menu,
 } from '@mui/material';
 import {
-  Visibility as ViewIcon,
+  MoreVert as MoreVertIcon,
+  CheckCircle as ApproveIcon,
 } from '@mui/icons-material';
-import { useCoupon } from '../../utils/contexts/CouponContext';
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiService } from "../../api/apiwrapper";
 import AnimatedLoader from '../../components/loaders/AnimatedLoader';
+import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const CouponManagement = () => {
-  const { coupons, loading } = useCoupon();
   const [selectedCoupon, setSelectedCoupon] = useState(null);
-  const [detailsDialog, setDetailsDialog] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [activeTab, setActiveTab] = useState('all');
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [menuCoupon, setMenuCoupon] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState(false);
+  const [couponToApprove, setCouponToApprove] = useState(null);
+  const loadMoreRef = useRef(null);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    isLoading
+  } = useInfiniteQuery({
+    queryKey: ["coupons", activeTab],
+    queryFn: async ({ pageParam = 0 }) => {
+      const endpoint = activeTab === 'all'
+        ? `admin/all-used-coupons?take=10&skip=${pageParam}`
+        : `admin/pending-approval-coupons?take=10&skip=${pageParam}`;
+      const response = await apiService.get(endpoint);
+      return response.data;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 10 ? allPages.length * 10 : undefined;
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id) => apiService.patch(`deals-redeem/approve/${id}`, {
+      status: 'approved'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["coupons"]);
+      toast.success('Coupon approved successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to approve coupon');
+    }
+  });
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0.1,
+      }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allDeals = data?.pages.flat() || [];
 
   const handleViewCoupon = (coupon) => {
-    setSelectedCoupon(coupon);
-    setDetailsDialog(true);
+    navigate(`/coupons/${coupon.id}`);
+    handleMenuClose();
   };
 
-  const handleCloseDialog = () => {
-    setDetailsDialog(false);
-    setSelectedCoupon(null);
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
   };
 
-  if (loading) {
+  const handleApproveClick = (id) => {
+    setCouponToApprove(id);
+    setConfirmDialog(true);
+    handleMenuClose();
+  };
+
+  const handleApprove = async () => {
+    try {
+      await approveMutation.mutateAsync(couponToApprove);
+      setConfirmDialog(false);
+      setCouponToApprove(null);
+    } catch (error) {
+      console.error('Error approving coupon:', error);
+    }
+  };
+
+  const handleMenuClick = (event, coupon) => {
+    setAnchorEl(event.currentTarget);
+    setMenuCoupon(coupon);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setMenuCoupon(null);
+  };
+
+  if (isLoading) {
     return <AnimatedLoader />;
   }
 
@@ -53,22 +153,12 @@ const CouponManagement = () => {
         Coupon Management
       </Typography>
 
-      <Grid container spacing={3}>
-        {/* Statistics Cards */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Typography color="textSecondary" gutterBottom>
-                Total Coupons
-              </Typography>
-              <Typography variant="h4">
-                {coupons.length}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+      <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+        <Tab label="All Coupons" value="all" />
+        <Tab label="Pending Approval" value="pending" />
+      </Tabs>
 
-        {/* Coupons Table */}
+      <Grid container spacing={3}>
         <Grid item xs={12}>
           <Card>
             <CardContent>
@@ -76,35 +166,43 @@ const CouponManagement = () => {
                 <Table>
                   <TableHead>
                     <TableRow>
-                      <TableCell>Title</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Shop</TableCell>
-                      <TableCell>Available Until</TableCell>
-                      <TableCell>Max Purchase Limit</TableCell>
+                      <TableCell>Coupon Code</TableCell>
+                      <TableCell>Deal Title</TableCell>
+                      <TableCell>Deal ID</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>User</TableCell>
+                      <TableCell>Used</TableCell>
                       <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {coupons.map((coupon) => (
+                    {allDeals.map((coupon) => (
                       <TableRow key={coupon.id}>
-                        <TableCell>{coupon.title}</TableCell>
+                        <TableCell>{coupon.couponCode}</TableCell>
+                        <TableCell>{coupon.deal?.title}</TableCell>
+                        <TableCell>{coupon.deal?.id}</TableCell>
                         <TableCell>
                           <Chip
-                            label={coupon.type}
+                            label={coupon.status}
                             size="small"
-                            color="primary"
+                            color={coupon.status === 'approved' ? 'success' : 'warning'}
                             variant="outlined"
                           />
                         </TableCell>
-                        <TableCell>{coupon.shop?.name}</TableCell>
-                        <TableCell>{new Date(coupon.availableUntil).toLocaleDateString()}</TableCell>
-                        <TableCell>{coupon.maxPurchaseLimit}</TableCell>
+                        <TableCell>{coupon.user?.name}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={coupon.used ? 'Yes' : 'No'}
+                            size="small"
+                            color={coupon.used ? 'error' : 'success'}
+                            variant="outlined"
+                          />
+                        </TableCell>
                         <TableCell>
                           <IconButton
-                            color="primary"
-                            onClick={() => handleViewCoupon(coupon)}
+                            onClick={(e) => handleMenuClick(e, coupon)}
                           >
-                            <ViewIcon />
+                            <MoreVertIcon />
                           </IconButton>
                         </TableCell>
                       </TableRow>
@@ -112,56 +210,43 @@ const CouponManagement = () => {
                   </TableBody>
                 </Table>
               </TableContainer>
+              <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '20px' }}>
+                {isFetchingNextPage && <CircularProgress />}
+                {!hasNextPage && <Typography>No more coupons to load</Typography>}
+                {isFetching && !isFetchingNextPage && <CircularProgress />}
+              </div>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Details Dialog */}
-      <Dialog
-        open={detailsDialog}
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
+      {/* Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
       >
-        {selectedCoupon && (
-          <>
-            <DialogTitle>Coupon Details</DialogTitle>
-            <DialogContent>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <Typography variant="h6">{selectedCoupon.title}</Typography>
-                  <Typography color="textSecondary" gutterBottom>
-                    Shop: {selectedCoupon.shop?.name}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12}>
-                  <Typography variant="body1">
-                    <strong>Description:</strong> {selectedCoupon.description}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Features:</strong> {selectedCoupon.features}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Keywords:</strong> {selectedCoupon.keywords}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Available Until:</strong> {new Date(selectedCoupon.availableUntil).toLocaleDateString()}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Max Purchase Limit:</strong> {selectedCoupon.maxPurchaseLimit}
-                  </Typography>
-                  <Typography variant="body1">
-                    <strong>Max Purchase Per User:</strong> {selectedCoupon.maxPurchasePerUser}
-                  </Typography>
-                </Grid>
-              </Grid>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Close</Button>
-            </DialogActions>
-          </>
+        <MenuItem onClick={() => handleViewCoupon(menuCoupon)}>Show Details</MenuItem>
+        {activeTab === 'pending' && menuCoupon && !menuCoupon.approved && (
+          <MenuItem onClick={() => handleApproveClick(menuCoupon.id)}>Approve</MenuItem>
         )}
+      </Menu>
+
+      {/* Confirm Approve Dialog */}
+      <Dialog
+        open={confirmDialog}
+        onClose={() => setConfirmDialog(false)}
+      >
+        <DialogTitle>Confirm Approval</DialogTitle>
+        <DialogContent>
+          <Typography>Are you sure you want to approve this coupon?</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog(false)}>Cancel</Button>
+          <Button onClick={handleApprove} color="success" variant="contained">
+            Approve
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

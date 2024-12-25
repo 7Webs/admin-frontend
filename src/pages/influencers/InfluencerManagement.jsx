@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
-  CardContent,
   Typography,
   Table,
   TableBody,
@@ -17,119 +17,103 @@ import {
   InputAdornment,
   Menu,
   MenuItem,
+  Grid,
+  Avatar,
+  CircularProgress,
   Dialog,
   DialogTitle,
-  DialogContent,
   DialogActions,
-  Grid,
-  Tab,
-  Tabs,
-  Avatar,
-  LinearProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
-  FilterList as FilterIcon,
   MoreVert as MoreVertIcon,
   Visibility as VisibilityIcon,
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
-  Warning as WarningIcon,
-  Instagram as InstagramIcon,
-  YouTube as YouTubeIcon,
-  Link as LinkIcon,
 } from '@mui/icons-material';
-
-// Mock influencer data
-const mockInfluencers = [
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    email: 'sarah.j@example.com',
-    avatar: 'https://example.com/avatar1.jpg',
-    status: 'active',
-    followers: {
-      instagram: 15000,
-      youtube: 25000,
-      tiktok: 10000,
-    },
-    engagementRate: 8.5,
-    activeCoupons: 3,
-    totalRedemptions: 450,
-    verificationStatus: 'verified',
-    categories: ['Fashion', 'Lifestyle'],
-    joinDate: '2023-06-01',
-    lastActive: '2024-01-15',
-  },
-  {
-    id: 2,
-    name: 'Mike Chen',
-    email: 'mike.c@example.com',
-    avatar: 'https://example.com/avatar2.jpg',
-    status: 'pending',
-    followers: {
-      instagram: 8000,
-      tiktok: 20000,
-    },
-    engagementRate: 6.2,
-    activeCoupons: 0,
-    totalRedemptions: 0,
-    verificationStatus: 'pending',
-    categories: ['Tech', 'Gaming'],
-    joinDate: '2024-01-10',
-    lastActive: '2024-01-10',
-  },
-  {
-    id: 3,
-    name: 'Emma Davis',
-    email: 'emma.d@example.com',
-    avatar: 'https://example.com/avatar3.jpg',
-    status: 'suspended',
-    followers: {
-      instagram: 12000,
-      youtube: 18000,
-    },
-    engagementRate: 4.8,
-    activeCoupons: 0,
-    totalRedemptions: 250,
-    verificationStatus: 'rejected',
-    categories: ['Beauty', 'Wellness'],
-    joinDate: '2023-08-15',
-    lastActive: '2023-12-28',
-  },
-];
-
-const statusColors = {
-  active: 'success',
-  pending: 'warning',
-  suspended: 'error',
-};
-
-const verificationColors = {
-  verified: 'success',
-  pending: 'warning',
-  rejected: 'error',
-};
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { apiService } from "../../api/apiwrapper";
+import AnimatedLoader from '../../components/loaders/AnimatedLoader';
+import { toast } from 'react-toastify';
 
 const InfluencerManagement = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedInfluencer, setSelectedInfluencer] = useState(null);
-  const [detailsDialog, setDetailsDialog] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
-  const [currentTab, setCurrentTab] = useState(0);
+  const loadMoreRef = useRef(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    action: null
+  });
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    isLoading,
+    refetch
+  } = useInfiniteQuery({
+    queryKey: ["users", searchQuery],
+    queryFn: async ({ pageParam = 0 }) => {
+      const response = await apiService.get(
+        `admin/users?take=10&skip=${pageParam}${searchQuery ? `&search=${searchQuery}` : ''}`
+      );
+      return response.data;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.length === 10 ? allPages.length * 10 : undefined;
+    },
+  });
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const target = entries[0];
+        if (target.isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0.1,
+      }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allUsers = data?.pages.flat() || [];
 
   const handleSearch = (event) => {
     setSearchTerm(event.target.value);
+  };
+
+  const handleSearchSubmit = () => {
+    setSearchQuery(searchTerm);
   };
 
   const handleStatusFilter = (status) => {
     setSelectedStatus(status);
   };
 
-  const handleMenuOpen = (event, influencer) => {
+  const handleMenuOpen = (event, user) => {
     setAnchorEl(event.currentTarget);
-    setSelectedInfluencer(influencer);
+    setSelectedInfluencer(user);
   };
 
   const handleMenuClose = () => {
@@ -137,24 +121,53 @@ const InfluencerManagement = () => {
   };
 
   const handleViewDetails = () => {
-    setDetailsDialog(true);
+    navigate(`/influencers/${selectedInfluencer.id}`);
     handleMenuClose();
   };
 
-  const handleTabChange = (event, newValue) => {
-    setCurrentTab(newValue);
+  const handleApprove = async () => {
+    try {
+      await apiService.post(`admin/users/${selectedInfluencer.id}/approve`);
+      handleMenuClose();
+      setConfirmDialog({ open: false, title: '', action: null });
+      refetch();
+      toast.success('Influencer approved successfully');
+    } catch (error) {
+      console.error('Error approving influencer:', error);
+      toast.error('Error approving influencer');
+    }
   };
 
-  const getTotalFollowers = (followers) => {
-    return Object.values(followers).reduce((acc, curr) => acc + curr, 0);
+  const handleSuspend = async () => {
+    try {
+      await apiService.post(`admin/users/${selectedInfluencer.id}/block`);
+      handleMenuClose();
+      setConfirmDialog({ open: false, title: '', action: null });
+      refetch();
+      toast.success('Influencer suspended successfully');
+    } catch (error) {
+      console.error('Error suspending influencer:', error);
+      toast.error('Error suspending influencer');
+    }
   };
 
-  const filteredInfluencers = mockInfluencers.filter((influencer) => {
-    const matchesSearch = influencer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         influencer.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || influencer.status === selectedStatus;
-    return matchesSearch && matchesStatus;
+  const openConfirmDialog = (title, action) => {
+    setConfirmDialog({
+      open: true,
+      title,
+      action
+    });
+  };
+
+  const filteredUsers = allUsers.filter((user) => {
+    const userStatus = user.approved ? 'approved' : 'not approved';
+    const matchesStatus = selectedStatus === 'all' || userStatus === selectedStatus;
+    return matchesStatus;
   });
+
+  if (isLoading) {
+    return <AnimatedLoader />;
+  }
 
   return (
     <Box>
@@ -165,21 +178,30 @@ const InfluencerManagement = () => {
       {/* Filters and Search */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={4}>
-          <TextField
-            fullWidth
-            placeholder="Search influencers..."
-            value={searchTerm}
-            onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              fullWidth
+              placeholder="Search influencers..."
+              value={searchTerm}
+              onChange={handleSearch}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleSearchSubmit}
+              sx={{ minWidth: '100px' }}
+            >
+              Search
+            </Button>
+          </Box>
         </Grid>
-        <Grid item xs={12} sm={6} md={8}>
+        <Grid item xs={12} sm={6} md={4}>
           <Button
             variant={selectedStatus === 'all' ? 'contained' : 'outlined'}
             onClick={() => handleStatusFilter('all')}
@@ -188,27 +210,20 @@ const InfluencerManagement = () => {
             All
           </Button>
           <Button
-            variant={selectedStatus === 'active' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('active')}
+            variant={selectedStatus === 'approved' ? 'contained' : 'outlined'}
+            onClick={() => handleStatusFilter('approved')}
             color="success"
             sx={{ mr: 1 }}
           >
-            Active
+            Approved
           </Button>
           <Button
-            variant={selectedStatus === 'pending' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('pending')}
-            color="warning"
+            variant={selectedStatus === 'not approved' ? 'contained' : 'outlined'}
+            onClick={() => handleStatusFilter('not approved')}
+            color="error"
             sx={{ mr: 1 }}
           >
-            Pending
-          </Button>
-          <Button
-            variant={selectedStatus === 'suspended' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('suspended')}
-            color="error"
-          >
-            Suspended
+            Not Approved
           </Button>
         </Grid>
       </Grid>
@@ -219,61 +234,44 @@ const InfluencerManagement = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Influencer</TableCell>
+                <TableCell>Name</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Verification</TableCell>
-                <TableCell>Total Followers</TableCell>
-                <TableCell>Engagement Rate</TableCell>
-                <TableCell>Active Coupons</TableCell>
-                <TableCell>Actions</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Created At</TableCell>
+                <TableCell align="center">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredInfluencers.map((influencer) => (
-                <TableRow key={influencer.id}>
+              {filteredUsers.map((user) => (
+                <TableRow key={user.id}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Avatar src={influencer.avatar} sx={{ mr: 2 }} />
+                      <Avatar
+                        src={user.avatar}
+                        alt={user.name}
+                        sx={{ width: 40, height: 40, mr: 2 }}
+                      >
+                        {user.name?.charAt(0)}
+                      </Avatar>
                       <Box>
-                        <Typography variant="subtitle2">{influencer.name}</Typography>
+                        <Typography variant="subtitle2">{user.name}</Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {influencer.email}
+                          {user.email}
                         </Typography>
                       </Box>
                     </Box>
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={influencer.status}
-                      color={statusColors[influencer.status]}
+                      label={user.approved ? 'Approved' : 'Not Approved'}
+                      color={user.approved ? 'success' : 'error'}
                       size="small"
                     />
                   </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={influencer.verificationStatus}
-                      color={verificationColors[influencer.verificationStatus]}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {getTotalFollowers(influencer.followers).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <Typography variant="body2" sx={{ mr: 1 }}>
-                        {influencer.engagementRate}%
-                      </Typography>
-                      <LinearProgress
-                        variant="determinate"
-                        value={influencer.engagementRate * 10}
-                        sx={{ width: 100 }}
-                      />
-                    </Box>
-                  </TableCell>
-                  <TableCell>{influencer.activeCoupons}</TableCell>
-                  <TableCell>
-                    <IconButton onClick={(e) => handleMenuOpen(e, influencer)}>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell align="center">
+                    <IconButton onClick={(e) => handleMenuOpen(e, user)}>
                       <MoreVertIcon />
                     </IconButton>
                   </TableCell>
@@ -282,6 +280,11 @@ const InfluencerManagement = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '20px' }}>
+          {isFetchingNextPage && <CircularProgress />}
+          {!hasNextPage && <Typography>No more influencers to load</Typography>}
+          {isFetching && !isFetchingNextPage && <CircularProgress />}
+        </div>
       </Card>
 
       {/* Action Menu */}
@@ -293,145 +296,32 @@ const InfluencerManagement = () => {
         <MenuItem onClick={handleViewDetails}>
           <VisibilityIcon sx={{ mr: 1 }} /> View Details
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <CheckCircleIcon sx={{ mr: 1 }} /> Verify Account
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <BlockIcon sx={{ mr: 1 }} /> Suspend Account
-        </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
-          <WarningIcon sx={{ mr: 1 }} /> Send Warning
-        </MenuItem>
+        {!selectedInfluencer?.approved && (
+          <MenuItem onClick={() => openConfirmDialog('Are you sure you want to approve this influencer?', handleApprove)}>
+            <CheckCircleIcon sx={{ mr: 1 }} /> Approve
+          </MenuItem>
+        )}
+        {selectedInfluencer?.approved && (
+          <MenuItem onClick={() => openConfirmDialog('Are you sure you want to suspend this influencer?', handleSuspend)}>
+            <BlockIcon sx={{ mr: 1 }} /> Suspend
+          </MenuItem>
+        )}
       </Menu>
 
-      {/* Details Dialog */}
+      {/* Confirmation Dialog */}
       <Dialog
-        open={detailsDialog}
-        onClose={() => setDetailsDialog(false)}
-        maxWidth="md"
-        fullWidth
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ open: false, title: '', action: null })}
       >
-        {selectedInfluencer && (
-          <>
-            <DialogTitle>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar
-                  src={selectedInfluencer.avatar}
-                  sx={{ width: 64, height: 64, mr: 2 }}
-                />
-                <Box>
-                  <Typography variant="h6">
-                    {selectedInfluencer.name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Member since {new Date(selectedInfluencer.joinDate).toLocaleDateString()}
-                  </Typography>
-                </Box>
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              <Tabs value={currentTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-                <Tab label="Overview" />
-                <Tab label="Social Media" />
-                <Tab label="Coupons" />
-                <Tab label="Activity" />
-              </Tabs>
-
-              {currentTab === 0 && (
-                <Grid container spacing={3}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Total Followers
-                        </Typography>
-                        <Typography variant="h5">
-                          {getTotalFollowers(selectedInfluencer.followers).toLocaleString()}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Engagement Rate
-                        </Typography>
-                        <Typography variant="h5">
-                          {selectedInfluencer.engagementRate}%
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Active Coupons
-                        </Typography>
-                        <Typography variant="h5">
-                          {selectedInfluencer.activeCoupons}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="body2" color="text.secondary">
-                          Total Redemptions
-                        </Typography>
-                        <Typography variant="h5">
-                          {selectedInfluencer.totalRedemptions}
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  <Grid item xs={12}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="h6" gutterBottom>
-                          Social Media Profiles
-                        </Typography>
-                        <Grid container spacing={2}>
-                          {Object.entries(selectedInfluencer.followers).map(([platform, followers]) => (
-                            <Grid item xs={12} sm={4} key={platform}>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                {platform === 'instagram' && <InstagramIcon sx={{ mr: 1 }} />}
-                                {platform === 'youtube' && <YouTubeIcon sx={{ mr: 1 }} />}
-                                {platform === 'tiktok' && <LinkIcon sx={{ mr: 1 }} />}
-                                <Box>
-                                  <Typography variant="body2" sx={{ textTransform: 'capitalize' }}>
-                                    {platform}
-                                  </Typography>
-                                  <Typography variant="subtitle2">
-                                    {followers.toLocaleString()} followers
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </Grid>
-                          ))}
-                        </Grid>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                </Grid>
-              )}
-
-              {/* Add content for other tabs */}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setDetailsDialog(false)}>Close</Button>
-              <Button
-                variant="contained"
-                color={selectedInfluencer.status === 'suspended' ? 'success' : 'error'}
-              >
-                {selectedInfluencer.status === 'suspended' ? 'Reactivate Account' : 'Suspend Account'}
-              </Button>
-            </DialogActions>
-          </>
-        )}
+        <DialogTitle>{confirmDialog.title}</DialogTitle>
+        <DialogActions>
+          <Button onClick={() => setConfirmDialog({ open: false, title: '', action: null })}>
+            Cancel
+          </Button>
+          <Button onClick={confirmDialog.action} variant="contained" color="primary">
+            Confirm
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

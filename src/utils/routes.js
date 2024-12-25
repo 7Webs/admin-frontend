@@ -7,7 +7,10 @@ import DashboardLayout from "../pages/dashboard/DashboardLayout";
 import InfluencerManagement from "../pages/influencers/InfluencerManagement";
 import VendorManagement from "../pages/vendors/VendorManagement";
 import CouponManagement from "../pages/coupon/CouponManagement";
+import CouponDetails from "../pages/coupon/CouponDetails";
 import Settings from "../pages/settings/Settings";
+import VendorDetails from "../pages/vendors/VendorDetails";
+import InfluencersDetails from "../pages/influencers/InfluencersDetails";
 
 export const routes = {
     public: [
@@ -35,12 +38,24 @@ export const routes = {
                     element: React.createElement(CouponManagement)
                 },
                 {
+                    path: "/coupons/:id",
+                    element: React.createElement(CouponDetails)
+                },
+                {
                     path: "/influencers",
                     element: React.createElement(InfluencerManagement)
                 },
                 {
+                    path: "/influencers/:id",
+                    element: React.createElement(InfluencersDetails)
+                },
+                {
                     path: "/vendors",
                     element: React.createElement(VendorManagement)
+                },
+                {
+                    path: "/vendors/:id",
+                    element: React.createElement(VendorDetails)
                 },
                 {
                     path: "/profile",

@@ -7,6 +7,8 @@ import theme from './theme/theme';
 
 import { AllProviders } from './utils/contexts/AllContext';
 import { routes } from './utils/routes';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
   return (
@@ -26,8 +28,15 @@ function App() {
           ))}
         </Routes>
       </AllProviders>
-
-    </ThemeProvider>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={true}
+        closeOnClick
+        rtl={false}
+      />
+    </ThemeProvider >
   );
 }
 
