@@ -26,6 +26,8 @@ import {
   Settings as SettingsIcon,
   ChevronLeft as ChevronLeftIcon,
   AccountCircle as AccountCircleIcon,
+  Category as CategoryIcon,
+  Subscriptions as SubscriptionsIcon,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useAuth } from '../../utils/contexts/AuthContext';
@@ -79,7 +81,9 @@ const DrawerHeader = styled('div')(({ theme }) => ({
 const menuItems = [
   { text: 'Vendors', icon: <StoreIcon />, path: '/vendors' },
   { text: 'Influencers', icon: <PeopleIcon />, path: '/influencers' },
-  { text: 'Content Moderation', icon: <ContentIcon />, path: '/coupons' },
+  { text: 'Coupons', icon: <ContentIcon />, path: '/coupons' },
+  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' },
+  { text: 'Subscriptions', icon: <SubscriptionsIcon />, path: '/subscriptions' },
   { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];

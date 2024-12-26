@@ -234,6 +234,8 @@ const InfluencerManagement = () => {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell>ID</TableCell>
+                <TableCell>Role</TableCell>
                 <TableCell>Name</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Email</TableCell>
@@ -244,6 +246,8 @@ const InfluencerManagement = () => {
             <TableBody>
               {filteredUsers.map((user) => (
                 <TableRow key={user.id}>
+                  <TableCell>{user.id}</TableCell>
+                  <TableCell>{user.role}</TableCell>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Avatar

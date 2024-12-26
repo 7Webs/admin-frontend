@@ -11,13 +11,15 @@ import CouponDetails from "../pages/coupon/CouponDetails";
 import Settings from "../pages/settings/Settings";
 import VendorDetails from "../pages/vendors/VendorDetails";
 import InfluencersDetails from "../pages/influencers/InfluencersDetails";
+import Categories from "../pages/categories/Categories";
+import Subscriptions from "../pages/subscriptions/Subscriptions";
 
 export const routes = {
     public: [
-        {
-            path: "/login",
-            element: React.createElement(Login)
-        },
+        // {
+        //     path: "/login",
+        //     element: React.createElement(Login)
+        // },
     ],
     protected: [
         {
@@ -36,6 +38,14 @@ export const routes = {
                 {
                     path: "/coupons",
                     element: React.createElement(CouponManagement)
+                },
+                {
+                    path: "/categories",
+                    element: React.createElement(Categories)
+                },
+                {
+                    path: "/subscriptions",
+                    element: React.createElement(Subscriptions)
                 },
                 {
                     path: "/coupons/:id",

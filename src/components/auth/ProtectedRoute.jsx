@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../utils/contexts/AuthContext';
 import AnimatedLoader from '../../components/loaders/AnimatedLoader';
-
+import Login from '../../pages/auth/Login';
 const ProtectedRoute = ({ children }) => {
   const { user, authChecked, loading } = useAuth();
 
@@ -10,7 +10,11 @@ const ProtectedRoute = ({ children }) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return <Login />;
+  }
+
+  if (user.role !== 'admin') {
+    return <Login />;
   }
 
   return children;

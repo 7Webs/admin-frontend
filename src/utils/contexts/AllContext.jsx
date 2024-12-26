@@ -8,13 +8,13 @@ export const AllProviders = ({ children }) => {
     return (
         <AuthProvider>
             {/* <ShopProvider> */}
-            <CategoryProvider>
-                {/* <CouponProvider> */}
-                {/* <SubscriptionProvider> */}
-                {children}
-                {/* </SubscriptionProvider> */}
-                {/* </CouponProvider> */}
-            </CategoryProvider>
+            {/* <CategoryProvider> */}
+            {/* <CouponProvider> */}
+            {/* <SubscriptionProvider> */}
+            {children}
+            {/* </SubscriptionProvider> */}
+            {/* </CouponProvider> */}
+            {/* </CategoryProvider> */}
             {/* </ShopProvider> */}
         </AuthProvider>
     );

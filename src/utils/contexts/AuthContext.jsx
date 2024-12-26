@@ -112,6 +112,7 @@ export const AuthProvider = ({ children }) => {
             await signOut(auth);
             setUser(null);
             toast.success("Logout successful");
+            window.location.reload();
         } catch (error) {
             toast.error(error.message);
             console.error("Logout error:", error);
