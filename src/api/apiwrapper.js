@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { app } from "../firebase";
 
 const api = axios.create({
-    baseURL: "https://clownfish-app-4jmg2.ondigitalocean.app/",
+  baseURL: "https://nano-backend-64lgb.ondigitalocean.app/",
 });
 
 const firebaseTokenInterceptor = async (config) => {
