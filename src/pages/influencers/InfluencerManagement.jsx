@@ -134,7 +134,6 @@ const InfluencerManagement = () => {
       toast.success('Influencer approved successfully');
     } catch (error) {
       console.error('Error approving influencer:', error);
-      toast.error('Error approving influencer');
     }
   };
 
@@ -147,7 +146,6 @@ const InfluencerManagement = () => {
       toast.success('Influencer suspended successfully');
     } catch (error) {
       console.error('Error suspending influencer:', error);
-      toast.error('Error suspending influencer');
     }
   };
 
@@ -223,7 +221,7 @@ const InfluencerManagement = () => {
             color="error"
             sx={{ mr: 1 }}
           >
-            Not Approved
+            Pending Approval
           </Button>
         </Grid>
       </Grid>
