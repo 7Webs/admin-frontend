@@ -41,7 +41,8 @@ const Subscriptions = () => {
         interval: 'month',
         description: '',
         isActive: true,
-        trialDays: ''
+        trialDays: '',
+        maxDeals: 0
     });
 
     const fetchSubscriptions = async () => {
@@ -74,7 +75,8 @@ const Subscriptions = () => {
             interval: 'month',
             description: '',
             isActive: true,
-            trialDays: ''
+            trialDays: '',
+            maxDeals: 0
         });
     };
 
@@ -94,7 +96,8 @@ const Subscriptions = () => {
             interval: subscription.interval,
             description: subscription.description,
             isActive: subscription.isActive,
-            trialDays: subscription.trialDays
+            trialDays: subscription.trialDays,
+            maxDeals: subscription.maxDeals
         });
         handleOpenDialog();
     };
@@ -117,7 +120,8 @@ const Subscriptions = () => {
             const payload = {
                 ...formData,
                 amount: parseFloat(formData.amount),
-                trialDays: parseInt(formData.trialDays)
+                trialDays: parseInt(formData.trialDays),
+                maxDeals: parseInt(formData.maxDeals)
             };
 
             if (selectedSubscription) {
@@ -164,6 +168,7 @@ const Subscriptions = () => {
                             <TableCell>Amount</TableCell>
                             <TableCell>Interval</TableCell>
                             <TableCell>Trial Days</TableCell>
+                            <TableCell>Max Deals</TableCell>
                             <TableCell>Status</TableCell>
                             <TableCell>Actions</TableCell>
                         </TableRow>
@@ -175,6 +180,7 @@ const Subscriptions = () => {
                                 <TableCell>€{subscription.amount}</TableCell>
                                 <TableCell>{subscription.interval}</TableCell>
                                 <TableCell>{subscription.trialDays}</TableCell>
+                                <TableCell>{subscription.maxDeals}</TableCell>
                                 <TableCell>{subscription.isActive ? 'Active' : 'Inactive'}</TableCell>
                                 <TableCell>
                                     <IconButton onClick={() => handleEdit(subscription)}>
@@ -236,6 +242,14 @@ const Subscriptions = () => {
                             name="trialDays"
                             type="number"
                             value={formData.trialDays}
+                            onChange={handleInputChange}
+                        />
+                        <TextField
+                            fullWidth
+                            label="Max Deals"
+                            name="maxDeals"
+                            type="number"
+                            value={formData.maxDeals}
                             onChange={handleInputChange}
                         />
                         <FormControlLabel
