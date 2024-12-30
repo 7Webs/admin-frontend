@@ -37,7 +37,7 @@ import { useNavigate } from 'react-router-dom';
 
 const CouponManagement = () => {
   const [selectedCoupon, setSelectedCoupon] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('pending');
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuCoupon, setMenuCoupon] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(false);
@@ -154,8 +154,8 @@ const CouponManagement = () => {
       </Typography>
 
       <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
-        <Tab label="All Coupons" value="all" />
         <Tab label="Pending Approval" value="pending" />
+        <Tab label="All Coupons" value="all" />
       </Tabs>
 
       <Grid container spacing={3}>

@@ -13,37 +13,66 @@ import {
     Container,
     useTheme,
     IconButton,
+    Link,
+    Stack,
+    Divider,
+    Button,
 } from '@mui/material';
 import {
     CalendarToday,
     ShoppingCart,
     Person,
     Share as ShareIcon,
-    PlayCircle as PlayCircleIcon
+    PlayCircle as PlayCircleIcon,
+    Facebook,
+    Instagram,
+    YouTube,
+    LinkedIn,
+    Twitter,
+    Check,
+    Close,
+    AccessTime
 } from '@mui/icons-material';
 import AnimatedLoader from '../../components/loaders/AnimatedLoader';
 import { motion } from 'framer-motion';
 import CouponAnalytics from './CouponAnalytics';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const CouponDetails = () => {
     const { id } = useParams();
     const [coupon, setCoupon] = useState(null);
     const [loading, setLoading] = useState(true);
     const theme = useTheme();
+    const queryClient = useQueryClient();
+
+    const approveMutation = useMutation({
+        mutationFn: (id) => apiService.patch(`deals-redeem/approve/${id}`, {
+            status: 'approved'
+        }),
+        onSuccess: () => {
+            queryClient.invalidateQueries(["coupons"]);
+            toast.success('Coupon approved successfully');
+            // Refresh coupon details
+            fetchCouponDetails();
+        },
+        onError: (error) => {
+            toast.error('Failed to approve coupon');
+        }
+    });
+
+    const fetchCouponDetails = async () => {
+        try {
+            const response = await apiService.get(`/deals-redeem/${id}`);
+            setCoupon(response.data);
+        } catch (error) {
+            toast.error('Error fetching coupon details');
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchCouponDetails = async () => {
-            try {
-                const response = await apiService.get(`deals/${id}`);
-                setCoupon(response.data);
-            } catch (error) {
-                toast.error('Error fetching coupon details');
-                console.error('Error:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchCouponDetails();
     }, [id]);
 
@@ -51,8 +80,8 @@ const CouponDetails = () => {
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: coupon.title,
-                    text: coupon.shortTagLine,
+                    title: coupon?.deal?.title,
+                    text: coupon?.deal?.shortTagLine,
                     url: window.location.href,
                 });
                 toast.success('Coupon shared successfully!');
@@ -62,6 +91,14 @@ const CouponDetails = () => {
             }
         } else {
             toast.error('Web Share API is not supported in your browser.');
+        }
+    };
+
+    const handleApprove = async () => {
+        try {
+            await approveMutation.mutateAsync(id);
+        } catch (error) {
+            console.error('Error approving coupon:', error);
         }
     };
 
@@ -117,8 +154,8 @@ const CouponDetails = () => {
                                     <CardMedia
                                         component="img"
                                         height="450"
-                                        image={coupon.images[0] || 'https://via.placeholder.com/400'}
-                                        alt={coupon.title}
+                                        image={coupon.deal?.images[0] || 'https://via.placeholder.com/400'}
+                                        alt={coupon.deal?.title}
                                         sx={{
                                             objectFit: 'cover',
                                             transition: '0.3s',
@@ -127,7 +164,7 @@ const CouponDetails = () => {
                                             }
                                         }}
                                     />
-                                    {coupon.video && (
+                                    {coupon.deal?.video && (
                                         <IconButton
                                             sx={{
                                                 position: 'absolute',
@@ -148,19 +185,48 @@ const CouponDetails = () => {
                                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                         <Typography variant="h3" sx={{ fontWeight: 700, color: theme.palette.primary.main }}>
-                                            {coupon.title}
+                                            {coupon.deal?.title}
                                         </Typography>
                                         <Box>
                                             <IconButton onClick={handleShare} sx={{ color: 'black' }}><ShareIcon /></IconButton>
                                         </Box>
                                     </Box>
 
+                                    <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+                                        <Chip
+                                            label={`Code: ${coupon.couponCode}`}
+                                            color="primary"
+                                            sx={{ fontWeight: 'bold' }}
+                                        />
+                                        <Chip
+                                            icon={coupon.used ? <Check /> : <Close />}
+                                            label={`Used: ${coupon.used ? 'Yes' : 'No'}`}
+                                            color={coupon.used ? "success" : "error"}
+                                        />
+                                        <Chip
+                                            icon={<AccessTime />}
+                                            label={`Status: ${coupon.status}`}
+                                            color={coupon.status === 'approved' ? "success" : "warning"}
+                                        />
+                                    </Stack>
+
+                                    {coupon.status === 'pending_approval' && (
+                                        <Button
+                                            variant="contained"
+                                            color="success"
+                                            onClick={handleApprove}
+                                            sx={{ mb: 2 }}
+                                        >
+                                            Approve Coupon
+                                        </Button>
+                                    )}
+
                                     <Typography
                                         variant="h6"
                                         color="text.secondary"
                                         sx={{ mb: 3, fontWeight: 500 }}
                                     >
-                                        {coupon.shortTagLine}
+                                        {coupon.deal?.shortTagLine}
                                     </Typography>
 
                                     <Box sx={{
@@ -174,65 +240,74 @@ const CouponDetails = () => {
                                     }}>
                                         <CalendarToday sx={{ mr: 1 }} />
                                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                            Available until: {new Date(coupon.availableUntil).toLocaleDateString()}
+                                            Available until: {new Date(coupon.deal?.availableUntil).toLocaleDateString()}
                                         </Typography>
-                                    </Box>
-
-                                    <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-                                        <Chip
-                                            icon={<ShoppingCart />}
-                                            label={`Max Purchase: ${coupon.maxPurchaseLimit}`}
-                                            variant="outlined"
-                                            sx={{
-                                                borderRadius: '12px',
-                                                px: 2,
-                                                py: 2.5,
-                                                borderColor: theme.palette.primary.main,
-                                                color: theme.palette.primary.main,
-                                                '& .MuiChip-icon': { color: theme.palette.primary.main }
-                                            }}
-                                        />
-                                        <Chip
-                                            icon={<Person />}
-                                            label={`Per User: ${coupon.maxPurchasePerUser}`}
-                                            variant="outlined"
-                                            sx={{
-                                                borderRadius: '12px',
-                                                px: 2,
-                                                py: 2.5,
-                                                borderColor: theme.palette.secondary.main,
-                                                color: theme.palette.secondary.main,
-                                                '& .MuiChip-icon': { color: theme.palette.secondary.main }
-                                            }}
-                                        />
                                     </Box>
 
                                     <Box sx={{ mb: 3 }}>
                                         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                                            Features
+                                            User Details
                                         </Typography>
-                                        <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-                                            {coupon.features}
-                                        </Typography>
+                                        <Stack spacing={1}>
+                                            <Typography><strong>Name:</strong> {coupon.user?.name}</Typography>
+                                            <Typography><strong>Email:</strong> {coupon.user?.email}</Typography>
+                                            <Typography><strong>Phone:</strong> {coupon.user?.phone}</Typography>
+                                            <Typography><strong>Gender:</strong> {coupon.user?.gender}</Typography>
+
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                {coupon.user?.facebookProfileLink && (
+                                                    <Link href={coupon.user.facebookProfileLink} target="_blank">
+                                                        <IconButton><Facebook /></IconButton>
+                                                    </Link>
+                                                )}
+                                                {coupon.user?.instagramProfileLink && (
+                                                    <Link href={coupon.user.instagramProfileLink} target="_blank">
+                                                        <IconButton><Instagram /></IconButton>
+                                                    </Link>
+                                                )}
+                                                {coupon.user?.youtubeProfileLink && (
+                                                    <Link href={coupon.user.youtubeProfileLink} target="_blank">
+                                                        <IconButton><YouTube /></IconButton>
+                                                    </Link>
+                                                )}
+                                                {coupon.user?.linkedinProfileLink && (
+                                                    <Link href={coupon.user.linkedinProfileLink} target="_blank">
+                                                        <IconButton><LinkedIn /></IconButton>
+                                                    </Link>
+                                                )}
+                                                {coupon.user?.twitterProfileLink && (
+                                                    <Link href={coupon.user.twitterProfileLink} target="_blank">
+                                                        <IconButton><Twitter /></IconButton>
+                                                    </Link>
+                                                )}
+                                            </Box>
+                                        </Stack>
                                     </Box>
 
-                                    <Box>
+                                    <Divider sx={{ my: 2 }} />
+
+                                    <Box sx={{ mb: 3 }}>
                                         <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                                            Keywords
+                                            Additional Information
                                         </Typography>
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                                            {coupon.keywords.split(',').map((keyword, index) => (
-                                                <Chip
-                                                    key={index}
-                                                    label={keyword.trim()}
-                                                    sx={{
-                                                        borderRadius: '8px',
-                                                        bgcolor: theme.palette.grey[100],
-                                                        '&:hover': { bgcolor: theme.palette.grey[200] }
-                                                    }}
-                                                />
-                                            ))}
-                                        </Box>
+                                        <Typography variant="body1">
+                                            {coupon.additionalInfo}
+                                        </Typography>
+                                        {coupon.socialMediaLink && (
+                                            <Link href={coupon.socialMediaLink} target="_blank" sx={{ display: 'block', mt: 1 }}>
+                                                Social Media Post
+                                            </Link>
+                                        )}
+                                    </Box>
+
+                                    <Box sx={{ mb: 3 }}>
+                                        <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                                            Shop Details
+                                        </Typography>
+                                        <Typography><strong>Name:</strong> {coupon.deal?.shop?.name}</Typography>
+                                        <Typography><strong>Email:</strong> {coupon.deal?.shop?.email}</Typography>
+                                        <Typography><strong>Address:</strong> {coupon.deal?.shop?.address}</Typography>
+                                        <Typography><strong>Category:</strong> {coupon.deal?.shop?.category?.name}</Typography>
                                     </Box>
                                 </Box>
                             </Grid>
@@ -246,17 +321,17 @@ const CouponDetails = () => {
                                     boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
                                 }}>
                                     <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-                                        Description
+                                        Deal Description
                                     </Typography>
                                     <Typography variant="body1" sx={{ lineHeight: 1.8 }}>
-                                        {coupon.description}
+                                        {coupon.deal?.description}
                                     </Typography>
                                 </Box>
                             </Grid>
 
                             {/* Analytics Section */}
                             <Grid item xs={12}>
-                                <CouponAnalytics id={id} />
+                                <CouponAnalytics id={coupon.deal?.id} />
                             </Grid>
                         </Grid>
                     </Paper>
