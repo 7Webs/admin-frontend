@@ -177,7 +177,7 @@ const CouponManagement = () => {
                   </TableHead>
                   <TableBody>
                     {allDeals.map((coupon) => (
-                      <TableRow key={coupon.id}>
+                      <TableRow key={coupon.id} sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.05)' } }} onClick={() => handleViewCoupon(coupon)}>
                         <TableCell>{coupon.couponCode}</TableCell>
                         <TableCell>{coupon.deal?.title}</TableCell>
                         <TableCell>{coupon.deal?.id}</TableCell>

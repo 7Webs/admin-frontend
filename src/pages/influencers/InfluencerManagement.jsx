@@ -49,6 +49,7 @@ const InfluencerManagement = () => {
     title: '',
     action: null
   });
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false);
 
   const {
     data,
@@ -112,6 +113,7 @@ const InfluencerManagement = () => {
   };
 
   const handleMenuOpen = (event, user) => {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
     setSelectedInfluencer(user);
   };
@@ -120,13 +122,14 @@ const InfluencerManagement = () => {
     setAnchorEl(null);
   };
 
-  const handleViewDetails = () => {
-    navigate(`/influencers/${selectedInfluencer.id}`);
+  const handleViewDetails = (user) => {
+    navigate(`/influencers/${user.id}`);
     handleMenuClose();
   };
 
   const handleApprove = async () => {
     try {
+      setIsConfirmLoading(true);
       await apiService.post(`admin/users/${selectedInfluencer.id}/approve`);
       handleMenuClose();
       setConfirmDialog({ open: false, title: '', action: null });
@@ -134,11 +137,14 @@ const InfluencerManagement = () => {
       toast.success('Influencer approved successfully');
     } catch (error) {
       console.error('Error approving influencer:', error);
+    } finally {
+      setIsConfirmLoading(false);
     }
   };
 
   const handleSuspend = async () => {
     try {
+      setIsConfirmLoading(true);
       await apiService.post(`admin/users/${selectedInfluencer.id}/block`);
       handleMenuClose();
       setConfirmDialog({ open: false, title: '', action: null });
@@ -146,6 +152,8 @@ const InfluencerManagement = () => {
       toast.success('Influencer suspended successfully');
     } catch (error) {
       console.error('Error suspending influencer:', error);
+    } finally {
+      setIsConfirmLoading(false);
     }
   };
 
@@ -232,9 +240,8 @@ const InfluencerManagement = () => {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Role</TableCell>
                 <TableCell>Name</TableCell>
+                <TableCell>Role</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Created At</TableCell>
@@ -243,13 +250,11 @@ const InfluencerManagement = () => {
             </TableHead>
             <TableBody>
               {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.id}</TableCell>
-                  <TableCell>{user.role}</TableCell>
+                <TableRow key={user.id} sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.05)' } }} onClick={() => navigate(`/influencers/${user.id}`)}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Avatar
-                        src={user.avatar}
+                        src={user.photo}
                         alt={user.name}
                         sx={{ width: 40, height: 40, mr: 2 }}
                       >
@@ -263,6 +268,7 @@ const InfluencerManagement = () => {
                       </Box>
                     </Box>
                   </TableCell>
+                  <TableCell>{user.role}</TableCell>
                   <TableCell>
                     <Chip
                       label={user.approved ? 'Approved' : 'Not Approved'}
@@ -272,7 +278,7 @@ const InfluencerManagement = () => {
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell align="center">
+                  <TableCell align="center" onClick={(e) => e.preventDefault()}>
                     <IconButton onClick={(e) => handleMenuOpen(e, user)}>
                       <MoreVertIcon />
                     </IconButton>
@@ -295,7 +301,7 @@ const InfluencerManagement = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleViewDetails}>
+        <MenuItem onClick={() => handleViewDetails(selectedInfluencer)}>
           <VisibilityIcon sx={{ mr: 1 }} /> View Details
         </MenuItem>
         {!selectedInfluencer?.approved && (
@@ -320,8 +326,13 @@ const InfluencerManagement = () => {
           <Button onClick={() => setConfirmDialog({ open: false, title: '', action: null })}>
             Cancel
           </Button>
-          <Button onClick={confirmDialog.action} variant="contained" color="primary">
-            Confirm
+          <Button
+            onClick={confirmDialog.action}
+            variant="contained"
+            color="primary"
+            disabled={isConfirmLoading}
+          >
+            {isConfirmLoading ? <CircularProgress size={24} /> : 'Confirm'}
           </Button>
         </DialogActions>
       </Dialog>

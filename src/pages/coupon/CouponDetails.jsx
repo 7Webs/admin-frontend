@@ -294,9 +294,24 @@ const CouponDetails = () => {
                                             {coupon.additionalInfo}
                                         </Typography>
                                         {coupon.socialMediaLink && (
-                                            <Link href={coupon.socialMediaLink} target="_blank" sx={{ display: 'block', mt: 1 }}>
-                                                Social Media Post
-                                            </Link>
+                                            <>
+                                                <Link href={coupon.socialMediaLink} target="_blank" sx={{ display: 'block', mt: 1 }}>
+                                                    Social Media Post
+                                                </Link>
+                                                {coupon.image && (
+                                                    <Box sx={{ mt: 2 }}>
+                                                        <img
+                                                            src={coupon.image}
+                                                            alt="Social media post"
+                                                            style={{
+                                                                maxWidth: '100%',
+                                                                height: 'auto',
+                                                                borderRadius: '8px'
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                )}
+                                            </>
                                         )}
                                     </Box>
 

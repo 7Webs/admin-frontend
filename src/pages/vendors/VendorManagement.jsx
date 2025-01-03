@@ -112,6 +112,7 @@ const VendorManagement = () => {
   };
 
   const handleMenuOpen = (event, vendor) => {
+    event.stopPropagation(); // Prevent row click when clicking menu
     setAnchorEl(event.currentTarget);
     setSelectedVendor(vendor);
   };
@@ -120,8 +121,8 @@ const VendorManagement = () => {
     setAnchorEl(null);
   };
 
-  const handleViewDetails = () => {
-    navigate(`/vendors/${selectedVendor.id}`);
+  const handleViewDetails = (vendor) => {
+    navigate(`/vendors/${vendor.id}`);
     handleMenuClose();
   };
 
@@ -244,7 +245,7 @@ const VendorManagement = () => {
             </TableHead>
             <TableBody>
               {filteredVendors.map((vendor) => (
-                <TableRow key={vendor.id}>
+                <TableRow key={vendor.id} sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.05)' } }} onClick={() => navigate(`/vendors/${vendor.id}`)}>
                   <TableCell>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       <Avatar
@@ -295,7 +296,7 @@ const VendorManagement = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleViewDetails}>
+        <MenuItem onClick={() => handleViewDetails(selectedVendor)}>
           <VisibilityIcon sx={{ mr: 1 }} /> View Details
         </MenuItem>
         {!selectedVendor?.approved && (
