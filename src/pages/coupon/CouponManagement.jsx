@@ -41,6 +41,7 @@ const CouponManagement = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuCoupon, setMenuCoupon] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(false);
+  const [confirmDialogAction, setConfirmDialogAction] = useState('');
   const [couponToApprove, setCouponToApprove] = useState(null);
   const loadMoreRef = useRef(null);
   const queryClient = useQueryClient();
@@ -80,6 +81,19 @@ const CouponManagement = () => {
     }
   });
 
+  const disapproveMutation = useMutation({
+    mutationFn: (id) => apiService.patch(`deals-redeem/approve/${id}`, {
+      status: 'used'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["coupons"]);
+      toast.success('Coupon marked as used');
+    },
+    onError: (error) => {
+      toast.error('Failed to mark coupon as used');
+    }
+  });
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -114,26 +128,39 @@ const CouponManagement = () => {
   };
 
   const handleTabChange = (event, newValue) => {
-    setActiveTab(newValue);
+    setActiveTab(newValue); 
   };
 
   const handleApproveClick = (id) => {
     setCouponToApprove(id);
+    setConfirmDialogAction('approve');
+    setConfirmDialog(true);
+    handleMenuClose();
+  };
+
+  const handleDisapproveClick = (id) => {
+    setCouponToApprove(id);
+    setConfirmDialogAction('disapprove');
     setConfirmDialog(true);
     handleMenuClose();
   };
 
   const handleApprove = async () => {
     try {
-      await approveMutation.mutateAsync(couponToApprove);
+      if (confirmDialogAction === 'approve') {
+        await approveMutation.mutateAsync(couponToApprove);
+      } else {
+        await disapproveMutation.mutateAsync(couponToApprove);
+      }
       setConfirmDialog(false);
       setCouponToApprove(null);
     } catch (error) {
-      console.error('Error approving coupon:', error);
+      console.error('Error handling coupon:', error);
     }
   };
 
   const handleMenuClick = (event, coupon) => {
+    event.stopPropagation(); // Prevent row click event
     setAnchorEl(event.currentTarget);
     setMenuCoupon(coupon);
   };
@@ -228,23 +255,37 @@ const CouponManagement = () => {
       >
         <MenuItem onClick={() => handleViewCoupon(menuCoupon)}>Show Details</MenuItem>
         {activeTab === 'pending' && menuCoupon && !menuCoupon.approved && (
-          <MenuItem onClick={() => handleApproveClick(menuCoupon.id)}>Approve</MenuItem>
+          <>
+            <MenuItem onClick={() => handleApproveClick(menuCoupon.id)}>Approve</MenuItem>
+            <MenuItem onClick={() => handleDisapproveClick(menuCoupon.id)}>Disapprove</MenuItem>
+          </>
         )}
       </Menu>
 
-      {/* Confirm Approve Dialog */}
+      {/* Confirm Dialog */}
       <Dialog
         open={confirmDialog}
         onClose={() => setConfirmDialog(false)}
       >
-        <DialogTitle>Confirm Approval</DialogTitle>
+        <DialogTitle>
+          {confirmDialogAction === 'approve' ? 'Confirm Approval' : 'Confirm Disapproval'}
+        </DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to approve this coupon?</Typography>
+          <Typography>
+            {confirmDialogAction === 'approve'
+              ? 'Are you sure you want to approve this coupon?'
+              : 'Are you sure you want to mark this coupon as used?'
+            }
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDialog(false)}>Cancel</Button>
-          <Button onClick={handleApprove} color="success" variant="contained">
-            Approve
+          <Button
+            onClick={handleApprove}
+            color={confirmDialogAction === 'approve' ? 'success' : 'error'}
+            variant="contained"
+          >
+            {confirmDialogAction === 'approve' ? 'Approve' : 'Disapprove'}
           </Button>
         </DialogActions>
       </Dialog>
