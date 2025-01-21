@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Typography,
   Box,
@@ -19,7 +19,15 @@ import {
   Chip,
   Divider,
   useTheme,
-  alpha
+  alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  RadioGroup,
+  FormControlLabel,
+  Radio
 } from '@mui/material';
 import {
   Facebook as FacebookIcon,
@@ -42,6 +50,14 @@ const VendorDetails = () => {
   const { id } = useParams();
   const [currentTab, setCurrentTab] = useState(0);
   const theme = useTheme();
+  const queryClient = useQueryClient();
+
+  // Dialog states
+  const [subscriptionDialog, setSubscriptionDialog] = useState(false);
+  const [collabsDialog, setCollabsDialog] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState('');
+  const [months, setMonths] = useState('');
+  const [noOfCollabs, setNoOfCollabs] = useState('');
 
   const { data: vendor, isLoading } = useQuery({
     queryKey: ['vendor', id],
@@ -51,8 +67,51 @@ const VendorDetails = () => {
     }
   });
 
+  const { data: subscriptionPlans } = useQuery({
+    queryKey: ['subscriptionPlans'],
+    queryFn: async () => {
+      const response = await apiService.get('/subscriptions');
+      return response.data;
+    }
+  });
+
+  const giveSubscriptionMutation = useMutation({
+    mutationFn: (data) => apiService.post('subscriptions/give-subscription', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['vendor', id]);
+      setSubscriptionDialog(false);
+      setSelectedPlan('');
+      setMonths('');
+    }
+  });
+
+  const addCollabsMutation = useMutation({
+    mutationFn: ({ shopId, noOfCollabs }) =>
+      apiService.post(`subscriptions/add-collabs/${shopId}/${noOfCollabs}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['vendor', id]);
+      setCollabsDialog(false);
+      setNoOfCollabs('');
+    }
+  });
+
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
+  };
+
+  const handleSubscriptionSubmit = () => {
+    giveSubscriptionMutation.mutate({
+      planId: parseInt(selectedPlan),
+      shopId: parseInt(id),
+      months: parseInt(months)
+    });
+  };
+
+  const handleCollabsSubmit = () => {
+    addCollabsMutation.mutate({
+      shopId: id,
+      noOfCollabs: parseInt(noOfCollabs)
+    });
   };
 
   if (isLoading) {
@@ -92,23 +151,116 @@ const VendorDetails = () => {
               >
                 {vendor.name?.charAt(0)}
               </Avatar>
-              <Box>
+              <Box sx={{ flex: 1 }}>
                 <Typography variant="h3" fontWeight="bold" gutterBottom>
                   {vendor.name}
                 </Typography>
-                <Chip
-                  label={vendor.approved ? 'Active' : 'Pending'}
-                  color={vendor.approved ? 'success' : 'warning'}
-                  sx={{ mr: 1 }}
-                />
-                <Chip
-                  label={`Joined ${new Date(vendor.createdAt).toLocaleDateString()}`}
-                  variant="outlined"
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Chip
+                    label={vendor.approved ? 'Active' : 'Pending'}
+                    color={vendor.approved ? 'success' : 'warning'}
+                  />
+                  <Chip
+                    label={`Joined ${new Date(vendor.createdAt).toLocaleDateString()}`}
+                    variant="outlined"
+                  />
+                  {vendor.subscriptionState === 'null' && (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => setSubscriptionDialog(true)}
+                    >
+                      Give Subscription
+                    </Button>
+                  )}
+                  {vendor.subscriptionState === 'active' && (
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={() => setCollabsDialog(true)}
+                    >
+                      Add Colabs
+                    </Button>
+                  )}
+                </Box>
               </Box>
             </Box>
           </Box>
         </Card>
+
+        <Dialog open={subscriptionDialog} onClose={() => setSubscriptionDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Give Subscription</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                Current Plan: {vendor.activeSubscriptionPlan?.name || 'No active plan'}
+              </Typography>
+              <Typography variant="subtitle2" color="text.secondary">
+                Select a new subscription plan:
+              </Typography>
+            </Box>
+            <RadioGroup value={selectedPlan} onChange={(e) => setSelectedPlan(e.target.value)}>
+              {subscriptionPlans?.map((plan) => (
+                <FormControlLabel
+                  key={plan.id}
+                  value={plan.id.toString()}
+                  control={<Radio />}
+                  label={
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="bold">
+                        {plan.name} - ${plan.amount}/month
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {plan.description}
+                      </Typography>
+                      <Typography variant="caption" color="primary">
+                        Max Deals: {plan.maxDeals} • Trial Days: {plan.trialDays}
+                      </Typography>
+                    </Box>
+                  }
+                  sx={{ mb: 2 }}
+                />
+              ))}
+            </RadioGroup>
+            <TextField
+              fullWidth
+              label="Number of Months"
+              type="number"
+              value={months}
+              onChange={(e) => setMonths(e.target.value)}
+              sx={{ mt: 2 }}
+              helperText="Enter the duration for this subscription"
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSubscriptionDialog(false)}>Cancel</Button>
+            <Button
+              onClick={handleSubscriptionSubmit}
+              variant="contained"
+              disabled={!selectedPlan || !months}
+            >
+              Submit
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog open={collabsDialog} onClose={() => setCollabsDialog(false)}>
+          <DialogTitle>Add Collabs</DialogTitle>
+          <DialogContent>
+            <TextField
+              fullWidth
+              label="Number of Collabs"
+              type="number"
+              value={noOfCollabs}
+              onChange={(e) => setNoOfCollabs(e.target.value)}
+              sx={{ mt: 2 }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setCollabsDialog(false)}>Cancel</Button>
+            <Button onClick={handleCollabsSubmit} variant="contained">Submit</Button>
+          </DialogActions>
+        </Dialog>
 
         <Tabs
           value={currentTab}
@@ -143,21 +295,59 @@ const VendorDetails = () => {
                   </Box>
                   <Divider sx={{ mb: 2 }} />
                   <Stack spacing={2}>
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary">Category</Typography>
-                      <Typography variant="body1" fontWeight={500}>{vendor.category?.name}</Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="subtitle2" color="text.secondary">Subscription</Typography>
-                      <Typography variant="body1" fontWeight={500}>
-                        {vendor.activeSubscriptionPlan?.name || 'No Plan'}
-                        <Chip
-                          size="small"
-                          label={vendor.subscriptionState}
-                          sx={{ ml: 1 }}
-                        />
-                      </Typography>
-                    </Box>
+                    <Grid container spacing={2}>
+                      <Grid item xs={6}>
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Category</Typography>
+                          <Typography variant="body1" fontWeight={500}>{vendor.category?.name}</Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Subscription</Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {vendor.activeSubscriptionPlan?.name || 'No Plan'}
+                            <Chip
+                              size="small"
+                              label={vendor.subscriptionState}
+                              sx={{ ml: 1 }}
+                            />
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Plan Activated At</Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {vendor.planActivatedAt ? new Date(vendor.planActivatedAt).toLocaleDateString() : 'N/A'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Subscription End Date</Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {vendor.subscriptionEndAt ? new Date(vendor.subscriptionEndAt).toLocaleDateString() : 'N/A'}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Monthly Collabs</Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {vendor.monthlyCollabs || 0}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Box>
+                          <Typography variant="subtitle2" color="text.secondary">Remaining Collabs</Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {vendor.remainingCollabs || 0}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    </Grid>
                   </Stack>
                 </CardContent>
               </Card>

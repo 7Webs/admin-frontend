@@ -23,6 +23,9 @@ import {
   Dialog,
   DialogTitle,
   DialogActions,
+  Select,
+  FormControl,
+  InputLabel,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -50,6 +53,7 @@ const InfluencerManagement = () => {
     action: null
   });
   const [isConfirmLoading, setIsConfirmLoading] = useState(false);
+  const [influencerType, setInfluencerType] = useState('');
 
   const {
     data,
@@ -205,6 +209,18 @@ const InfluencerManagement = () => {
             >
               Search
             </Button>
+            <FormControl sx={{ minWidth: 120 }}>
+              <InputLabel>Type</InputLabel>
+              <Select
+                value={influencerType}
+                label="Type"
+                onChange={(e) => setInfluencerType(e.target.value)}
+              >
+                <MenuItem value="pico">Pico</MenuItem>
+                <MenuItem value="nano">Nano</MenuItem>
+                <MenuItem value="micro">Micro</MenuItem>
+              </Select>
+            </FormControl>
           </Box>
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
