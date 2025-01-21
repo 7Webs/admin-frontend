@@ -164,15 +164,15 @@ const VendorDetails = () => {
                     label={`Joined ${new Date(vendor.createdAt).toLocaleDateString()}`}
                     variant="outlined"
                   />
-                  {vendor.subscriptionState === 'null' && (
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      onClick={() => setSubscriptionDialog(true)}
-                    >
-                      Give Subscription
-                    </Button>
-                  )}
+
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={() => setSubscriptionDialog(true)}
+                  >
+                    Give Subscription
+                  </Button>
+
                   {vendor.subscriptionState === 'active' && (
                     <Button
                       variant="contained"
