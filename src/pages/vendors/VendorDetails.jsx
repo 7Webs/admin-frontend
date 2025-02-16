@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Typography,
   Box,
@@ -27,8 +27,8 @@ import {
   TextField,
   RadioGroup,
   FormControlLabel,
-  Radio
-} from '@mui/material';
+  Radio,
+} from "@mui/material";
 import {
   Facebook as FacebookIcon,
   Instagram as InstagramIcon,
@@ -40,11 +40,11 @@ import {
   LocationOn as LocationIcon,
   Business as BusinessIcon,
   Person as PersonIcon,
-  Description as DescriptionIcon
-} from '@mui/icons-material';
-import { FaTiktok } from 'react-icons/fa';
-import { apiService } from '../../api/apiwrapper';
-import VendorAnalytics from './VendorAnalytics';
+  Description as DescriptionIcon,
+} from "@mui/icons-material";
+import { FaTiktok } from "react-icons/fa";
+import { apiService } from "../../api/apiwrapper";
+import VendorAnalytics from "./VendorAnalytics";
 
 const VendorDetails = () => {
   const { id } = useParams();
@@ -55,44 +55,45 @@ const VendorDetails = () => {
   // Dialog states
   const [subscriptionDialog, setSubscriptionDialog] = useState(false);
   const [collabsDialog, setCollabsDialog] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState('');
-  const [months, setMonths] = useState('');
-  const [noOfCollabs, setNoOfCollabs] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState("");
+  const [months, setMonths] = useState("");
+  const [noOfCollabs, setNoOfCollabs] = useState("");
 
   const { data: vendor, isLoading } = useQuery({
-    queryKey: ['vendor', id],
+    queryKey: ["vendor", id],
     queryFn: async () => {
       const response = await apiService.get(`shop/${id}`);
       return response.data;
-    }
+    },
   });
 
   const { data: subscriptionPlans } = useQuery({
-    queryKey: ['subscriptionPlans'],
+    queryKey: ["subscriptionPlans"],
     queryFn: async () => {
-      const response = await apiService.get('/subscriptions');
+      const response = await apiService.get("/subscriptions");
       return response.data;
-    }
+    },
   });
 
   const giveSubscriptionMutation = useMutation({
-    mutationFn: (data) => apiService.post('subscriptions/give-subscription', data),
+    mutationFn: (data) =>
+      apiService.post("subscriptions/give-subscription", data),
     onSuccess: () => {
-      queryClient.invalidateQueries(['vendor', id]);
+      queryClient.invalidateQueries(["vendor", id]);
       setSubscriptionDialog(false);
-      setSelectedPlan('');
-      setMonths('');
-    }
+      setSelectedPlan("");
+      setMonths("");
+    },
   });
 
   const addCollabsMutation = useMutation({
     mutationFn: ({ shopId, noOfCollabs }) =>
       apiService.post(`subscriptions/add-collabs/${shopId}/${noOfCollabs}`),
     onSuccess: () => {
-      queryClient.invalidateQueries(['vendor', id]);
+      queryClient.invalidateQueries(["vendor", id]);
       setCollabsDialog(false);
-      setNoOfCollabs('');
-    }
+      setNoOfCollabs("");
+    },
   });
 
   const handleTabChange = (event, newValue) => {
@@ -103,20 +104,39 @@ const VendorDetails = () => {
     giveSubscriptionMutation.mutate({
       planId: parseInt(selectedPlan),
       shopId: parseInt(id),
-      months: parseInt(months)
+      months: parseInt(months),
     });
   };
 
   const handleCollabsSubmit = () => {
     addCollabsMutation.mutate({
       shopId: id,
-      noOfCollabs: parseInt(noOfCollabs)
+      noOfCollabs: parseInt(noOfCollabs),
     });
+  };
+
+  const handleDelete = async () => {
+    try {
+      await apiService.delete(`/shop/${id}`);
+      handleMenuClose();
+      setConfirmDialog({ open: false, title: "", action: null });
+      toast.success("Vendor suspended successfully");
+    } catch (error) {
+      console.error("Error suspending vendor:", error);
+      toast.error("Error suspending vendor");
+    }
   };
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -131,14 +151,24 @@ const VendorDetails = () => {
   }
 
   return (
-    <Box sx={{ bgcolor: alpha(theme.palette.background.default, 0.98), minHeight: '100vh' }}>
+    <Box
+      sx={{
+        bgcolor: alpha(theme.palette.background.default, 0.98),
+        minHeight: "100vh",
+      }}
+    >
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Card sx={{ mb: 4, borderRadius: 3, boxShadow: theme.shadows[3] }}>
-          <Box sx={{
-            p: 4,
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.1)}, ${alpha(theme.palette.primary.main, 0.05)})`
-          }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box
+            sx={{
+              p: 4,
+              background: `linear-gradient(135deg, ${alpha(
+                theme.palette.primary.main,
+                0.1
+              )}, ${alpha(theme.palette.primary.main, 0.05)})`,
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
               <Avatar
                 src={vendor.logo}
                 alt={vendor.name}
@@ -146,7 +176,7 @@ const VendorDetails = () => {
                   width: 100,
                   height: 100,
                   boxShadow: 3,
-                  border: `4px solid ${theme.palette.background.paper}`
+                  border: `4px solid ${theme.palette.background.paper}`,
                 }}
               >
                 {vendor.name?.charAt(0)}
@@ -155,13 +185,15 @@ const VendorDetails = () => {
                 <Typography variant="h3" fontWeight="bold" gutterBottom>
                   {vendor.name}
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                   <Chip
-                    label={vendor.approved ? 'Active' : 'Pending'}
-                    color={vendor.approved ? 'success' : 'warning'}
+                    label={vendor.approved ? "Active" : "Pending"}
+                    color={vendor.approved ? "success" : "warning"}
                   />
                   <Chip
-                    label={`Joined ${new Date(vendor.createdAt).toLocaleDateString()}`}
+                    label={`Joined ${new Date(
+                      vendor.createdAt
+                    ).toLocaleDateString()}`}
                     variant="outlined"
                   />
 
@@ -173,7 +205,7 @@ const VendorDetails = () => {
                     Give Subscription
                   </Button>
 
-                  {vendor.subscriptionState === 'active' && (
+                  {vendor.subscriptionState === "active" && (
                     <Button
                       variant="contained"
                       color="secondary"
@@ -188,18 +220,31 @@ const VendorDetails = () => {
           </Box>
         </Card>
 
-        <Dialog open={subscriptionDialog} onClose={() => setSubscriptionDialog(false)} maxWidth="sm" fullWidth>
+        <Dialog
+          open={subscriptionDialog}
+          onClose={() => setSubscriptionDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
           <DialogTitle>Give Subscription</DialogTitle>
           <DialogContent>
             <Box sx={{ mb: 3 }}>
-              <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-                Current Plan: {vendor.activeSubscriptionPlan?.name || 'No active plan'}
+              <Typography
+                variant="subtitle1"
+                color="text.secondary"
+                gutterBottom
+              >
+                Current Plan:{" "}
+                {vendor.activeSubscriptionPlan?.name || "No active plan"}
               </Typography>
               <Typography variant="subtitle2" color="text.secondary">
                 Select a new subscription plan:
               </Typography>
             </Box>
-            <RadioGroup value={selectedPlan} onChange={(e) => setSelectedPlan(e.target.value)}>
+            <RadioGroup
+              value={selectedPlan}
+              onChange={(e) => setSelectedPlan(e.target.value)}
+            >
               {subscriptionPlans?.map((plan) => (
                 <FormControlLabel
                   key={plan.id}
@@ -214,7 +259,8 @@ const VendorDetails = () => {
                         {plan.description}
                       </Typography>
                       <Typography variant="caption" color="primary">
-                        Max Deals: {plan.maxDeals} • Trial Days: {plan.trialDays}
+                        Max Deals: {plan.maxDeals} • Trial Days:{" "}
+                        {plan.trialDays}
                       </Typography>
                     </Box>
                   }
@@ -258,7 +304,9 @@ const VendorDetails = () => {
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setCollabsDialog(false)}>Cancel</Button>
-            <Button onClick={handleCollabsSubmit} variant="contained">Submit</Button>
+            <Button onClick={handleCollabsSubmit} variant="contained">
+              Submit
+            </Button>
           </DialogActions>
         </Dialog>
 
@@ -267,15 +315,15 @@ const VendorDetails = () => {
           onChange={handleTabChange}
           sx={{
             mb: 4,
-            '& .MuiTab-root': {
+            "& .MuiTab-root": {
               fontWeight: 600,
-              fontSize: '1.1rem',
+              fontSize: "1.1rem",
               minWidth: 120,
-              textTransform: 'none'
+              textTransform: "none",
             },
-            '& .Mui-selected': {
-              color: theme.palette.primary.main
-            }
+            "& .Mui-selected": {
+              color: theme.palette.primary.main,
+            },
           }}
         >
           <Tab label="Overview" />
@@ -285,10 +333,18 @@ const VendorDetails = () => {
         {currentTab === 0 && (
           <Grid container spacing={3}>
             <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%', borderRadius: 3, boxShadow: theme.shadows[3] }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  borderRadius: 3,
+                  boxShadow: theme.shadows[3],
+                }}
+              >
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <BusinessIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <BusinessIcon
+                      sx={{ mr: 1, color: theme.palette.primary.main }}
+                    />
                     <Typography variant="h6" fontWeight={600}>
                       Business Details
                     </Typography>
@@ -298,15 +354,27 @@ const VendorDetails = () => {
                     <Grid container spacing={2}>
                       <Grid item xs={6}>
                         <Box>
-                          <Typography variant="subtitle2" color="text.secondary">Category</Typography>
-                          <Typography variant="body1" fontWeight={500}>{vendor.category?.name}</Typography>
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
+                            Category
+                          </Typography>
+                          <Typography variant="body1" fontWeight={500}>
+                            {vendor.category?.name}
+                          </Typography>
                         </Box>
                       </Grid>
                       <Grid item xs={6}>
                         <Box>
-                          <Typography variant="subtitle2" color="text.secondary">Subscription</Typography>
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
+                            Subscription
+                          </Typography>
                           <Typography variant="body1" fontWeight={500}>
-                            {vendor.activeSubscriptionPlan?.name || 'No Plan'}
+                            {vendor.activeSubscriptionPlan?.name || "No Plan"}
                             <Chip
                               size="small"
                               label={vendor.subscriptionState}
@@ -317,23 +385,46 @@ const VendorDetails = () => {
                       </Grid>
                       <Grid item xs={6}>
                         <Box>
-                          <Typography variant="subtitle2" color="text.secondary">Plan Activated At</Typography>
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
+                            Plan Activated At
+                          </Typography>
                           <Typography variant="body1" fontWeight={500}>
-                            {vendor.planActivatedAt ? new Date(vendor.planActivatedAt).toLocaleDateString() : 'N/A'}
+                            {vendor.planActivatedAt
+                              ? new Date(
+                                  vendor.planActivatedAt
+                                ).toLocaleDateString()
+                              : "N/A"}
                           </Typography>
                         </Box>
                       </Grid>
                       <Grid item xs={6}>
                         <Box>
-                          <Typography variant="subtitle2" color="text.secondary">Subscription End Date</Typography>
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
+                            Subscription Ends At
+                          </Typography>
                           <Typography variant="body1" fontWeight={500}>
-                            {vendor.subscriptionEndAt ? new Date(vendor.subscriptionEndAt).toLocaleDateString() : 'N/A'}
+                            {vendor.subscriptionEndAt
+                              ? new Date(
+                                  vendor.subscriptionEndAt
+                                ).toLocaleDateString()
+                              : "N/A"}
                           </Typography>
                         </Box>
                       </Grid>
                       <Grid item xs={6}>
                         <Box>
-                          <Typography variant="subtitle2" color="text.secondary">Monthly Collabs</Typography>
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
+                            Monthly Collabs
+                          </Typography>
                           <Typography variant="body1" fontWeight={500}>
                             {vendor.monthlyCollabs || 0}
                           </Typography>
@@ -341,7 +432,12 @@ const VendorDetails = () => {
                       </Grid>
                       <Grid item xs={6}>
                         <Box>
-                          <Typography variant="subtitle2" color="text.secondary">Remaining Collabs</Typography>
+                          <Typography
+                            variant="subtitle2"
+                            color="text.secondary"
+                          >
+                            Remaining Collabs
+                          </Typography>
                           <Typography variant="body1" fontWeight={500}>
                             {vendor.remainingCollabs || 0}
                           </Typography>
@@ -354,26 +450,34 @@ const VendorDetails = () => {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <Card sx={{ height: '100%', borderRadius: 3, boxShadow: theme.shadows[3] }}>
+              <Card
+                sx={{
+                  height: "100%",
+                  borderRadius: 3,
+                  boxShadow: theme.shadows[3],
+                }}
+              >
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <PersonIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <PersonIcon
+                      sx={{ mr: 1, color: theme.palette.primary.main }}
+                    />
                     <Typography variant="h6" fontWeight={600}>
                       Owner Information
                     </Typography>
                   </Box>
                   <Divider sx={{ mb: 2 }} />
                   <Stack spacing={2}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PersonIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <PersonIcon sx={{ mr: 1, color: "text.secondary" }} />
                       <Typography>{vendor.owner?.name}</Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <PhoneIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <PhoneIcon sx={{ mr: 1, color: "text.secondary" }} />
                       <Typography>{vendor.owner?.phone}</Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                      <EmailIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <EmailIcon sx={{ mr: 1, color: "text.secondary" }} />
                       <Typography>{vendor.owner?.email}</Typography>
                     </Box>
                   </Stack>
@@ -384,8 +488,10 @@ const VendorDetails = () => {
             <Grid item xs={12}>
               <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[3] }}>
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <DescriptionIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+                    <DescriptionIcon
+                      sx={{ mr: 1, color: theme.palette.primary.main }}
+                    />
                     <Typography variant="h6" fontWeight={600}>
                       About
                     </Typography>
@@ -401,7 +507,7 @@ const VendorDetails = () => {
             <Grid item xs={12}>
               <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[3] }}>
                 <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
                     {/* <Language as WebsiteIcon sx={{ mr: 1, color: theme.palette.primary.main }} /> */}
                     <Typography variant="h6" fontWeight={600}>
                       Social Media
@@ -414,14 +520,14 @@ const VendorDetails = () => {
                         href={vendor.owner.facebookProfileLink}
                         target="_blank"
                         sx={{
-                          bgcolor: alpha('#1877F2', 0.1),
-                          color: '#1877F2',
-                          '&:hover': {
-                            bgcolor: '#1877F2',
-                            color: 'white',
-                            transform: 'translateY(-4px)'
+                          bgcolor: alpha("#1877F2", 0.1),
+                          color: "#1877F2",
+                          "&:hover": {
+                            bgcolor: "#1877F2",
+                            color: "white",
+                            transform: "translateY(-4px)",
                           },
-                          transition: 'all 0.2s'
+                          transition: "all 0.2s",
                         }}
                       >
                         <FacebookIcon />
@@ -432,14 +538,14 @@ const VendorDetails = () => {
                         href={vendor.owner.instagramProfileLink}
                         target="_blank"
                         sx={{
-                          bgcolor: alpha('#E4405F', 0.1),
-                          color: '#E4405F',
-                          '&:hover': {
-                            bgcolor: '#E4405F',
-                            color: 'white',
-                            transform: 'translateY(-4px)'
+                          bgcolor: alpha("#E4405F", 0.1),
+                          color: "#E4405F",
+                          "&:hover": {
+                            bgcolor: "#E4405F",
+                            color: "white",
+                            transform: "translateY(-4px)",
                           },
-                          transition: 'all 0.2s'
+                          transition: "all 0.2s",
                         }}
                       >
                         <InstagramIcon />
@@ -450,14 +556,14 @@ const VendorDetails = () => {
                         href={vendor.owner.tiktokProfileLink}
                         target="_blank"
                         sx={{
-                          bgcolor: alpha('#000000', 0.1),
-                          color: '#000000',
-                          '&:hover': {
-                            bgcolor: '#000000',
-                            color: 'white',
-                            transform: 'translateY(-4px)'
+                          bgcolor: alpha("#000000", 0.1),
+                          color: "#000000",
+                          "&:hover": {
+                            bgcolor: "#000000",
+                            color: "white",
+                            transform: "translateY(-4px)",
                           },
-                          transition: 'all 0.2s'
+                          transition: "all 0.2s",
                         }}
                       >
                         <FaTiktok />
@@ -468,14 +574,14 @@ const VendorDetails = () => {
                         href={vendor.owner.twitterProfileLink}
                         target="_blank"
                         sx={{
-                          bgcolor: alpha('#1DA1F2', 0.1),
-                          color: '#1DA1F2',
-                          '&:hover': {
-                            bgcolor: '#1DA1F2',
-                            color: 'white',
-                            transform: 'translateY(-4px)'
+                          bgcolor: alpha("#1DA1F2", 0.1),
+                          color: "#1DA1F2",
+                          "&:hover": {
+                            bgcolor: "#1DA1F2",
+                            color: "white",
+                            transform: "translateY(-4px)",
                           },
-                          transition: 'all 0.2s'
+                          transition: "all 0.2s",
                         }}
                       >
                         <TwitterIcon />
@@ -486,14 +592,14 @@ const VendorDetails = () => {
                         href={vendor.owner.youtubeProfileLink}
                         target="_blank"
                         sx={{
-                          bgcolor: alpha('#FF0000', 0.1),
-                          color: '#FF0000',
-                          '&:hover': {
-                            bgcolor: '#FF0000',
-                            color: 'white',
-                            transform: 'translateY(-4px)'
+                          bgcolor: alpha("#FF0000", 0.1),
+                          color: "#FF0000",
+                          "&:hover": {
+                            bgcolor: "#FF0000",
+                            color: "white",
+                            transform: "translateY(-4px)",
                           },
-                          transition: 'all 0.2s'
+                          transition: "all 0.2s",
                         }}
                       >
                         <YouTubeIcon />
@@ -504,14 +610,14 @@ const VendorDetails = () => {
                         href={vendor.owner.linkedinProfileLink}
                         target="_blank"
                         sx={{
-                          bgcolor: alpha('#0A66C2', 0.1),
-                          color: '#0A66C2',
-                          '&:hover': {
-                            bgcolor: '#0A66C2',
-                            color: 'white',
-                            transform: 'translateY(-4px)'
+                          bgcolor: alpha("#0A66C2", 0.1),
+                          color: "#0A66C2",
+                          "&:hover": {
+                            bgcolor: "#0A66C2",
+                            color: "white",
+                            transform: "translateY(-4px)",
                           },
-                          transition: 'all 0.2s'
+                          transition: "all 0.2s",
                         }}
                       >
                         <LinkedInIcon />
@@ -524,28 +630,33 @@ const VendorDetails = () => {
           </Grid>
         )}
 
-        {currentTab === 1 && (
-          <VendorAnalytics vendorId={id} />
-        )}
+        {currentTab === 1 && <VendorAnalytics vendorId={id} />}
 
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+        <Box sx={{ mt: 4, display: "flex", justifyContent: "flex-end" }}>
           <Button
             variant="contained"
-            color={vendor.approved ? 'error' : 'success'}
+            color={vendor.approved ? "error" : "success"}
             sx={{
               px: 4,
               py: 1.5,
               borderRadius: 2,
               fontWeight: 600,
               boxShadow: theme.shadows[4],
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: theme.shadows[8]
+              "&:hover": {
+                transform: "translateY(-2px)",
+                boxShadow: theme.shadows[8],
               },
-              transition: 'all 0.2s'
+              transition: "all 0.2s",
+            }}
+            onClick={() => {
+              if (vendor.approved) {
+                handleDelete();
+              } else {
+                handleApproveVendor();
+              }
             }}
           >
-            {vendor.approved ? 'Suspend Account' : 'Approve Account'}
+            {vendor.approved ? "Delete Account" : "Approve Account"}
           </Button>
         </Box>
       </Container>

@@ -34,6 +34,7 @@ import {
   Cake as CakeIcon,
   Wc as GenderIcon,
   Block,
+  Delete,
 } from "@mui/icons-material";
 import { FaTiktok } from "react-icons/fa";
 import { apiService } from "../../api/apiwrapper";
@@ -74,6 +75,19 @@ const InfluencerDetails = () => {
       setConfirmDialog({ open: false, title: "", action: null });
       toast.success("Influencer suspended successfully");
       user.approved = false;
+    } catch (error) {
+      console.error("Error suspending influencer:", error);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const newuser = await apiService.delete(`user/${id}`);
+      setConfirmDialog({ open: false, title: "", action: null });
+      user.name = newuser.name;
+      user.email = newuser.email;
+      user.photo = newuser.photo;
+      toast.success("User Deleted Successfully");
     } catch (error) {
       console.error("Error suspending influencer:", error);
     }
@@ -191,6 +205,20 @@ const InfluencerDetails = () => {
                     Suspend
                   </Button>
                 )}
+                &nbsp;
+                <Button
+                  variant="contained"
+                  color="error"
+                  startIcon={<Delete />}
+                  onClick={() =>
+                    openConfirmDialog(
+                      "Are you sure you want to delete this influencer?",
+                      handleDelete
+                    )
+                  }
+                >
+                  Delete
+                </Button>
               </Grid>
             </Grid>
           </Box>

@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Box,
   Card,
@@ -23,31 +23,32 @@ import {
   Dialog,
   DialogTitle,
   DialogActions,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Search as SearchIcon,
   MoreVert as MoreVertIcon,
   Visibility as VisibilityIcon,
   Block as BlockIcon,
   CheckCircle as CheckCircleIcon,
-} from '@mui/icons-material';
+  Delete,
+} from "@mui/icons-material";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { apiService } from "../../api/apiwrapper";
-import AnimatedLoader from '../../components/loaders/AnimatedLoader';
-import { toast } from 'react-toastify';
+import AnimatedLoader from "../../components/loaders/AnimatedLoader";
+import { toast } from "react-toastify";
 
 const VendorManagement = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const loadMoreRef = useRef(null);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
-    title: '',
-    action: null
+    title: "",
+    action: null,
   });
 
   const {
@@ -57,12 +58,14 @@ const VendorManagement = () => {
     isFetching,
     isFetchingNextPage,
     isLoading,
-    refetch
+    refetch,
   } = useInfiniteQuery({
     queryKey: ["shops", searchQuery],
     queryFn: async ({ pageParam = 0 }) => {
       const response = await apiService.get(
-        `admin/shops?take=10&skip=${pageParam}${searchQuery ? `&search=${searchQuery}` : ''}`
+        `admin/shops?take=10&skip=${pageParam}${
+          searchQuery ? `&search=${searchQuery}` : ""
+        }`
       );
       return response.data;
     },
@@ -130,12 +133,12 @@ const VendorManagement = () => {
     try {
       await apiService.post(`admin/shops/${selectedVendor.id}/approve`);
       handleMenuClose();
-      setConfirmDialog({ open: false, title: '', action: null });
+      setConfirmDialog({ open: false, title: "", action: null });
       refetch();
-      toast.success('Vendor approved successfully');
+      toast.success("Vendor approved successfully");
     } catch (error) {
-      console.error('Error approving vendor:', error);
-      toast.error('Error approving vendor');
+      console.error("Error approving vendor:", error);
+      toast.error("Error approving vendor");
     }
   };
 
@@ -143,12 +146,25 @@ const VendorManagement = () => {
     try {
       await apiService.post(`admin/shops/${selectedVendor.id}/block`);
       handleMenuClose();
-      setConfirmDialog({ open: false, title: '', action: null });
+      setConfirmDialog({ open: false, title: "", action: null });
       refetch();
-      toast.success('Vendor suspended successfully');
+      toast.success("Vendor suspended successfully");
     } catch (error) {
-      console.error('Error suspending vendor:', error);
-      toast.error('Error suspending vendor');
+      console.error("Error suspending vendor:", error);
+      toast.error("Error suspending vendor");
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await apiService.delete(`/shop/${selectedVendor.id}`);
+      handleMenuClose();
+      setConfirmDialog({ open: false, title: "", action: null });
+      refetch();
+      toast.success("Vendor suspended successfully");
+    } catch (error) {
+      console.error("Error suspending vendor:", error);
+      toast.error("Error suspending vendor");
     }
   };
 
@@ -156,13 +172,14 @@ const VendorManagement = () => {
     setConfirmDialog({
       open: true,
       title,
-      action
+      action,
     });
   };
 
   const filteredVendors = allShops.filter((vendor) => {
-    const vendorStatus = vendor.approved ? 'approved' : 'not approved';
-    const matchesStatus = selectedStatus === 'all' || vendorStatus === selectedStatus;
+    const vendorStatus = vendor.approved ? "approved" : "not approved";
+    const matchesStatus =
+      selectedStatus === "all" || vendorStatus === selectedStatus;
     return matchesStatus;
   });
 
@@ -179,7 +196,7 @@ const VendorManagement = () => {
       {/* Filters and Search */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={4}>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: "flex", gap: 1 }}>
             <TextField
               fullWidth
               placeholder="Search vendors..."
@@ -196,7 +213,7 @@ const VendorManagement = () => {
             <Button
               variant="contained"
               onClick={handleSearchSubmit}
-              sx={{ minWidth: '100px' }}
+              sx={{ minWidth: "100px" }}
             >
               Search
             </Button>
@@ -204,23 +221,25 @@ const VendorManagement = () => {
         </Grid>
         <Grid item xs={12} sm={6} md={4}>
           <Button
-            variant={selectedStatus === 'all' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('all')}
+            variant={selectedStatus === "all" ? "contained" : "outlined"}
+            onClick={() => handleStatusFilter("all")}
             sx={{ mr: 1 }}
           >
             All
           </Button>
           <Button
-            variant={selectedStatus === 'approved' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('approved')}
+            variant={selectedStatus === "approved" ? "contained" : "outlined"}
+            onClick={() => handleStatusFilter("approved")}
             color="success"
             sx={{ mr: 1 }}
           >
             Approved
           </Button>
           <Button
-            variant={selectedStatus === 'not approved' ? 'contained' : 'outlined'}
-            onClick={() => handleStatusFilter('not approved')}
+            variant={
+              selectedStatus === "not approved" ? "contained" : "outlined"
+            }
+            onClick={() => handleStatusFilter("not approved")}
             color="error"
             sx={{ mr: 1 }}
           >
@@ -245,9 +264,16 @@ const VendorManagement = () => {
             </TableHead>
             <TableBody>
               {filteredVendors.map((vendor) => (
-                <TableRow key={vendor.id} sx={{ cursor: 'pointer', '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.05)' } }} onClick={() => navigate(`/vendors/${vendor.id}`)}>
+                <TableRow
+                  key={vendor.id}
+                  sx={{
+                    cursor: "pointer",
+                    "&:hover": { backgroundColor: "rgba(0, 0, 0, 0.05)" },
+                  }}
+                  onClick={() => navigate(`/vendors/${vendor.id}`)}
+                >
                   <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
                       <Avatar
                         src={vendor.logo}
                         alt={vendor.name}
@@ -256,7 +282,9 @@ const VendorManagement = () => {
                         {vendor.name?.charAt(0)}
                       </Avatar>
                       <Box>
-                        <Typography variant="subtitle2">{vendor.name}</Typography>
+                        <Typography variant="subtitle2">
+                          {vendor.name}
+                        </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {vendor.email}
                         </Typography>
@@ -265,14 +293,18 @@ const VendorManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label={vendor.approved ? 'Approved' : 'Not Approved'}
-                      color={vendor.approved ? 'success' : 'error'}
+                      label={vendor.approved ? "Approved" : "Not Approved"}
+                      color={vendor.approved ? "success" : "error"}
                       size="small"
                     />
                   </TableCell>
                   <TableCell>{vendor.category?.name}</TableCell>
-                  <TableCell>{vendor.activeSubscriptionPlan?.name || 'No Plan'}</TableCell>
-                  <TableCell>{new Date(vendor.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    {vendor.activeSubscriptionPlan?.name || "No Plan"}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(vendor.createdAt).toLocaleDateString()}
+                  </TableCell>
                   <TableCell align="center">
                     <IconButton onClick={(e) => handleMenuOpen(e, vendor)}>
                       <MoreVertIcon />
@@ -283,7 +315,7 @@ const VendorManagement = () => {
             </TableBody>
           </Table>
         </TableContainer>
-        <div ref={loadMoreRef} style={{ textAlign: 'center', padding: '20px' }}>
+        <div ref={loadMoreRef} style={{ textAlign: "center", padding: "20px" }}>
           {isFetchingNextPage && <CircularProgress />}
           {!hasNextPage && <Typography>No more vendors to load</Typography>}
           {isFetching && !isFetchingNextPage && <CircularProgress />}
@@ -300,13 +332,27 @@ const VendorManagement = () => {
           <VisibilityIcon sx={{ mr: 1 }} /> View Details
         </MenuItem>
         {!selectedVendor?.approved && (
-          <MenuItem onClick={() => openConfirmDialog('Are you sure you want to approve this vendor?', handleApprove)}>
+          <MenuItem
+            onClick={() =>
+              openConfirmDialog(
+                "Are you sure you want to approve this vendor?",
+                handleApprove
+              )
+            }
+          >
             <CheckCircleIcon sx={{ mr: 1 }} /> Approve
           </MenuItem>
         )}
         {selectedVendor?.approved && (
-          <MenuItem onClick={() => openConfirmDialog('Are you sure you want to suspend this vendor?', handleSuspend)}>
-            <BlockIcon sx={{ mr: 1 }} /> Suspend
+          <MenuItem
+            onClick={() =>
+              openConfirmDialog(
+                "Are you sure you want to suspend this vendor?",
+                handleDelete
+              )
+            }
+          >
+            <Delete sx={{ mr: 1 }} /> Delete
           </MenuItem>
         )}
       </Menu>
@@ -314,14 +360,24 @@ const VendorManagement = () => {
       {/* Confirmation Dialog */}
       <Dialog
         open={confirmDialog.open}
-        onClose={() => setConfirmDialog({ open: false, title: '', action: null })}
+        onClose={() =>
+          setConfirmDialog({ open: false, title: "", action: null })
+        }
       >
         <DialogTitle>{confirmDialog.title}</DialogTitle>
         <DialogActions>
-          <Button onClick={() => setConfirmDialog({ open: false, title: '', action: null })}>
+          <Button
+            onClick={() =>
+              setConfirmDialog({ open: false, title: "", action: null })
+            }
+          >
             Cancel
           </Button>
-          <Button onClick={confirmDialog.action} variant="contained" color="primary">
+          <Button
+            onClick={confirmDialog.action}
+            variant="contained"
+            color="primary"
+          >
             Confirm
           </Button>
         </DialogActions>

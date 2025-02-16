@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useState } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Drawer,
@@ -16,7 +16,7 @@ import {
   Avatar,
   Menu,
   MenuItem,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Menu as MenuIcon,
   Store as StoreIcon,
@@ -28,64 +28,68 @@ import {
   AccountCircle as AccountCircleIcon,
   Category as CategoryIcon,
   Subscriptions as SubscriptionsIcon,
-} from '@mui/icons-material';
-import { styled } from '@mui/material/styles';
-import { useAuth } from '../../utils/contexts/AuthContext';
+} from "@mui/icons-material";
+import { styled } from "@mui/material/styles";
+import { useAuth } from "../../utils/contexts/AuthContext";
 
 const drawerWidth = 240;
 
-const Main = styled('main', { shouldForwardProp: (prop) => prop !== 'open' })(
+const Main = styled("main", { shouldForwardProp: (prop) => prop !== "open" })(
   ({ theme, open }) => ({
     flexGrow: 1,
     padding: theme.spacing(3),
-    transition: theme.transitions.create('margin', {
+    transition: theme.transitions.create("margin", {
       easing: theme.transitions.easing.sharp,
       duration: theme.transitions.duration.leavingScreen,
     }),
     marginLeft: `-${drawerWidth}px`,
     ...(open && {
-      transition: theme.transitions.create('margin', {
+      transition: theme.transitions.create("margin", {
         easing: theme.transitions.easing.easeOut,
         duration: theme.transitions.duration.enteringScreen,
       }),
       marginLeft: 0,
     }),
-  }),
+  })
 );
 
 const AppBarStyled = styled(AppBar, {
-  shouldForwardProp: (prop) => prop !== 'open',
+  shouldForwardProp: (prop) => prop !== "open",
 })(({ theme, open }) => ({
-  transition: theme.transitions.create(['margin', 'width'], {
+  transition: theme.transitions.create(["margin", "width"], {
     easing: theme.transitions.easing.sharp,
     duration: theme.transitions.duration.leavingScreen,
   }),
   ...(open && {
     width: `calc(100% - ${drawerWidth}px)`,
     marginLeft: `${drawerWidth}px`,
-    transition: theme.transitions.create(['margin', 'width'], {
+    transition: theme.transitions.create(["margin", "width"], {
       easing: theme.transitions.easing.easeOut,
       duration: theme.transitions.duration.enteringScreen,
     }),
   }),
 }));
 
-const DrawerHeader = styled('div')(({ theme }) => ({
-  display: 'flex',
-  alignItems: 'center',
+const DrawerHeader = styled("div")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
   padding: theme.spacing(0, 1),
   ...theme.mixins.toolbar,
-  justifyContent: 'flex-end',
+  justifyContent: "flex-end",
 }));
 
 const menuItems = [
-  { text: 'Vendors', icon: <StoreIcon />, path: '/vendors' },
-  { text: 'Influencers', icon: <PeopleIcon />, path: '/influencers' },
-  { text: 'Coupons', icon: <ContentIcon />, path: '/coupons' },
-  { text: 'Categories', icon: <CategoryIcon />, path: '/categories' },
-  { text: 'Subscriptions', icon: <SubscriptionsIcon />, path: '/subscriptions' },
-  { text: 'Analytics', icon: <AnalyticsIcon />, path: '/analytics' },
-  { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  { text: "Vendors", icon: <StoreIcon />, path: "/vendors" },
+  { text: "Influencers", icon: <PeopleIcon />, path: "/influencers" },
+  { text: "Coupons", icon: <ContentIcon />, path: "/coupons" },
+  { text: "Categories", icon: <CategoryIcon />, path: "/categories" },
+  {
+    text: "Subscriptions",
+    icon: <SubscriptionsIcon />,
+    path: "/subscriptions",
+  },
+  { text: "Analytics", icon: <AnalyticsIcon />, path: "/analytics" },
+  // { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
 
 const DashboardLayout = () => {
@@ -112,17 +116,17 @@ const DashboardLayout = () => {
 
   const handleProfile = () => {
     handleMenuClose();
-    navigate('/profile');
+    navigate("/profile");
   };
 
   const handleLogout = async () => {
     await logout();
     handleMenuClose();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: "flex" }}>
       <AppBarStyled position="fixed" open={open}>
         <Toolbar>
           <IconButton
@@ -130,7 +134,7 @@ const DashboardLayout = () => {
             aria-label="open drawer"
             onClick={handleDrawerOpen}
             edge="start"
-            sx={{ mr: 2, ...(open && { display: 'none' }) }}
+            sx={{ mr: 2, ...(open && { display: "none" }) }}
           >
             <MenuIcon />
           </IconButton>
@@ -152,13 +156,13 @@ const DashboardLayout = () => {
               id="menu-appbar"
               anchorEl={anchorEl}
               anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
+                vertical: "bottom",
+                horizontal: "right",
               }}
               keepMounted
               transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
+                vertical: "top",
+                horizontal: "right",
               }}
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
@@ -173,9 +177,9 @@ const DashboardLayout = () => {
         sx={{
           width: drawerWidth,
           flexShrink: 0,
-          '& .MuiDrawer-paper': {
+          "& .MuiDrawer-paper": {
             width: drawerWidth,
-            boxSizing: 'border-box',
+            boxSizing: "border-box",
           },
         }}
         variant="persistent"
