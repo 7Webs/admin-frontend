@@ -39,6 +39,19 @@ import AnimatedLoader from "../../components/loaders/AnimatedLoader";
 import { motion } from "framer-motion";
 import CouponAnalytics from "./CouponAnalytics";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Instagram as InstagramIcon,
+  VideoCall as VideoIcon,
+  Slideshow as StoryIcon,
+} from "@mui/icons-material";
+import { FaTiktok as TiktokIcon } from "react-icons/fa";
+const influencerOptions = {
+  instagram_post: { label: "Instagram Post", icon: InstagramIcon },
+  instagram_story: { label: "Instagram Story", icon: StoryIcon },
+  instagram_video_post: { label: "Instagram Video Post", icon: VideoIcon },
+  instagram_video_story: { label: "Instagram Video Story", icon: VideoIcon },
+  tiktok_post: { label: "TikTok Post", icon: TiktokIcon },
+};
 
 const CouponDetails = () => {
   const { id } = useParams();
@@ -151,6 +164,37 @@ const CouponDetails = () => {
       </Container>
     );
   }
+
+  const renderInfluencerRequirements = () => {
+    if (!coupon.influencerRequirements) return null;
+
+    const requirements = coupon.influencerRequirements.split(",");
+    return (
+      <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+        {requirements.map((req) => {
+          const option = influencerOptions[req];
+          if (!option) return null;
+          const Icon = option.icon;
+          return (
+            <Chip
+              key={req}
+              icon={<Icon />}
+              label={option.label}
+              variant="outlined"
+              sx={{
+                borderRadius: "12px",
+                px: 2,
+                py: 2.5,
+                // borderColor: theme.palette.primary.main,
+                // color: theme.palette.primary.main,
+                // "& .MuiChip-icon": { color: theme.palette.primary.main },
+              }}
+            />
+          );
+        })}
+      </Box>
+    );
+  };
 
   return (
     <Container maxWidth="lg">
@@ -362,6 +406,7 @@ const CouponDetails = () => {
                           ).toLocaleDateString()}
                         </Typography>
                       </Box>
+                      {renderInfluencerRequirements()}
 
                       <Box sx={{ mb: 3 }}>
                         <Typography
