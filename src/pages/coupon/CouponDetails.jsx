@@ -17,6 +17,11 @@ import {
   Stack,
   Divider,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
 } from "@mui/material";
 import {
   CalendarToday,
@@ -45,6 +50,7 @@ import {
   Slideshow as StoryIcon,
 } from "@mui/icons-material";
 import { FaTiktok as TiktokIcon } from "react-icons/fa";
+
 const influencerOptions = {
   instagram_post: { label: "Instagram Post", icon: InstagramIcon },
   instagram_story: { label: "Instagram Story", icon: StoryIcon },
@@ -60,6 +66,9 @@ const CouponDetails = () => {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [adminComment, setAdminComment] = useState("");
+  const [disapproveDialog, setDisapproveDialog] = useState(false);
+
   const approveMutation = useMutation({
     mutationFn: (id) =>
       apiService.patch(`deals-redeem/approve/${id}`, {
@@ -76,13 +85,16 @@ const CouponDetails = () => {
   });
 
   const disapproveMutation = useMutation({
-    mutationFn: (id) =>
+    mutationFn: ({ id, comment }) =>
       apiService.patch(`deals-redeem/approve/${id}`, {
         status: "re_submission_requested",
+        adminComment: comment,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries(["coupons"]);
       toast.success("Coupon marked as Re-submission Requested");
+      setDisapproveDialog(false);
+      setAdminComment("");
       fetchCouponDetails();
     },
     onError: (error) => {
@@ -134,7 +146,10 @@ const CouponDetails = () => {
 
   const handleDisapprove = async () => {
     try {
-      await disapproveMutation.mutateAsync(id);
+      await disapproveMutation.mutateAsync({
+        id,
+        comment: adminComment,
+      });
     } catch (error) {
       console.error("Error marking coupon as used:", error);
     }
@@ -185,9 +200,6 @@ const CouponDetails = () => {
                 borderRadius: "12px",
                 px: 2,
                 py: 2.5,
-                // borderColor: theme.palette.primary.main,
-                // color: theme.palette.primary.main,
-                // "& .MuiChip-icon": { color: theme.palette.primary.main },
               }}
             />
           );
@@ -215,10 +227,8 @@ const CouponDetails = () => {
             }}
           >
             <Grid container spacing={4}>
-              {/* Main Image and Details Section in Single Row */}
               <Grid item xs={12}>
                 <Grid container spacing={4}>
-                  {/* Main Image Section */}
                   <Grid item xs={12} md={6}>
                     <Card
                       elevation={0}
@@ -260,7 +270,6 @@ const CouponDetails = () => {
                     </Card>
                   </Grid>
 
-                  {/* Details Section */}
                   <Grid item xs={12} md={6}>
                     <Box
                       sx={{
@@ -366,7 +375,7 @@ const CouponDetails = () => {
                           <Button
                             variant="contained"
                             color="error"
-                            onClick={handleDisapprove}
+                            onClick={() => setDisapproveDialog(true)}
                             startIcon={<Close />}
                             sx={{
                               textTransform: "none",
@@ -512,7 +521,6 @@ const CouponDetails = () => {
                 </Grid>
               </Grid>
 
-              {/* Additional Information Section */}
               <Grid item xs={12}>
                 <Divider sx={{ my: 2 }} />
                 <Box sx={{ mb: 3 }}>
@@ -646,7 +654,6 @@ const CouponDetails = () => {
                   )}
                 </Box>
 
-                {/* Description Section */}
                 <Box
                   sx={{
                     bgcolor: theme.palette.background.paper,
@@ -668,7 +675,6 @@ const CouponDetails = () => {
                 </Box>
               </Grid>
 
-              {/* Analytics Section */}
               <Grid item xs={12}>
                 <CouponAnalytics id={coupon.deal?.id} />
               </Grid>
@@ -676,6 +682,49 @@ const CouponDetails = () => {
           </Paper>
         </motion.div>
       </Box>
+
+      <Dialog
+        open={disapproveDialog}
+        onClose={() => {
+          setDisapproveDialog(false);
+          setAdminComment("");
+        }}
+      >
+        <DialogTitle>Disapprove Coupon</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Please provide a reason for disapproving this coupon:
+          </Typography>
+          <TextField
+            autoFocus
+            multiline
+            rows={4}
+            fullWidth
+            label="Admin Comment"
+            value={adminComment}
+            onChange={(e) => setAdminComment(e.target.value)}
+            placeholder="Enter the reason for disapproval..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setDisapproveDialog(false);
+              setAdminComment("");
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDisapprove}
+            color="error"
+            variant="contained"
+            disabled={!adminComment.trim()}
+          >
+            Disapprove
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
