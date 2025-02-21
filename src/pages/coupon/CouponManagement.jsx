@@ -43,6 +43,8 @@ const CouponManagement = () => {
   const [confirmDialog, setConfirmDialog] = useState(false);
   const [confirmDialogAction, setConfirmDialogAction] = useState('');
   const [couponToApprove, setCouponToApprove] = useState(null);
+  const [adminComment, setAdminComment] = useState('');
+  const [disapproveDialog, setDisapproveDialog] = useState(false);
   const loadMoreRef = useRef(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -82,15 +84,18 @@ const CouponManagement = () => {
   });
 
   const disapproveMutation = useMutation({
-    mutationFn: (id) => apiService.patch(`deals-redeem/approve/${id}`, {
-      status: 'used'
+    mutationFn: ({ id, comment }) => apiService.patch(`deals-redeem/approve/${id}`, {
+      status: 're_submission_requested',
+      adminComment: comment
     }),
     onSuccess: () => {
       queryClient.invalidateQueries(["coupons"]);
-      toast.success('Coupon marked as used');
+      toast.success('Coupon marked as Re-submission Requested');
+      setDisapproveDialog(false);
+      setAdminComment('');
     },
     onError: (error) => {
-      toast.error('Failed to mark coupon as used');
+      toast.error('Failed to mark coupon as Re-submission Requested');
     }
   });
 
@@ -140,18 +145,13 @@ const CouponManagement = () => {
 
   const handleDisapproveClick = (id) => {
     setCouponToApprove(id);
-    setConfirmDialogAction('disapprove');
-    setConfirmDialog(true);
+    setDisapproveDialog(true);
     handleMenuClose();
   };
 
   const handleApprove = async () => {
     try {
-      if (confirmDialogAction === 'approve') {
-        await approveMutation.mutateAsync(couponToApprove);
-      } else {
-        await disapproveMutation.mutateAsync(couponToApprove);
-      }
+      await approveMutation.mutateAsync(couponToApprove);
       setConfirmDialog(false);
       setCouponToApprove(null);
     } catch (error) {
@@ -159,8 +159,20 @@ const CouponManagement = () => {
     }
   };
 
+  const handleDisapprove = async () => {
+    try {
+      await disapproveMutation.mutateAsync({
+        id: couponToApprove,
+        comment: adminComment
+      });
+      setCouponToApprove(null);
+    } catch (error) {
+      console.error('Error handling coupon:', error);
+    }
+  };
+
   const handleMenuClick = (event, coupon) => {
-    event.stopPropagation(); // Prevent row click event
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
     setMenuCoupon(coupon);
   };
@@ -268,24 +280,65 @@ const CouponManagement = () => {
         onClose={() => setConfirmDialog(false)}
       >
         <DialogTitle>
-          {confirmDialogAction === 'approve' ? 'Confirm Approval' : 'Confirm Disapproval'}
+          Confirm Approval
         </DialogTitle>
         <DialogContent>
           <Typography>
-            {confirmDialogAction === 'approve'
-              ? 'Are you sure you want to approve this coupon?'
-              : 'Are you sure you want to mark this coupon as used?'
-            }
+            Are you sure you want to approve this coupon?
           </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setConfirmDialog(false)}>Cancel</Button>
           <Button
             onClick={handleApprove}
-            color={confirmDialogAction === 'approve' ? 'success' : 'error'}
+            color="success"
             variant="contained"
           >
-            {confirmDialogAction === 'approve' ? 'Approve' : 'Disapprove'}
+            Approve
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Disapprove Dialog */}
+      <Dialog
+        open={disapproveDialog}
+        onClose={() => {
+          setDisapproveDialog(false);
+          setAdminComment('');
+        }}
+      >
+        <DialogTitle>
+          Disapprove Coupon
+        </DialogTitle>
+        <DialogContent>
+          <Typography sx={{ mb: 2 }}>
+            Please provide a reason for disapproving this coupon:
+          </Typography>
+          <TextField
+            autoFocus
+            multiline
+            rows={4}
+            fullWidth
+            label="Admin Comment"
+            value={adminComment}
+            onChange={(e) => setAdminComment(e.target.value)}
+            placeholder="Enter the reason for disapproval..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setDisapproveDialog(false);
+            setAdminComment('');
+          }}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleDisapprove}
+            color="error"
+            variant="contained"
+            disabled={!adminComment.trim()}
+          >
+            Disapprove
           </Button>
         </DialogActions>
       </Dialog>

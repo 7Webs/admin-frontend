@@ -1,6 +1,6 @@
 import React from "react";
 import Lottie from "react-lottie";
-import loadingData from "../../Assets/lottie/loader.json";
+import loadingData from "../../assets/lottie/loader.json";
 const AnimatedLoader = () => {
   const defaultOptions = {
     loop: true,
