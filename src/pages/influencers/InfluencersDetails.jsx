@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Typography,
   Box,
@@ -20,6 +20,11 @@ import {
   DialogTitle,
   DialogActions,
   Button,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Paper,
 } from "@mui/material";
 import {
   Facebook as FacebookIcon,
@@ -29,21 +34,26 @@ import {
   LinkedIn as LinkedInIcon,
   Email as EmailIcon,
   Phone as PhoneIcon,
+  LocationOn as LocationIcon,
+  Business as BusinessIcon,
   Person as PersonIcon,
-  Category as CategoryIcon,
-  Cake as CakeIcon,
-  Wc as GenderIcon,
+  Description as DescriptionIcon,
   Block,
   Delete,
+  Star as StarIcon,
+  Category,
 } from "@mui/icons-material";
 import { FaTiktok } from "react-icons/fa";
 import { apiService } from "../../api/apiwrapper";
 import { toast } from "react-toastify";
-import { BsCheckCircleFill } from "react-icons/bs";
+import { BsCheckCircleFill, BsGenderAmbiguous } from "react-icons/bs";
+
+const influencerTypes = ["pico", "nano", "micro"];
 
 const InfluencerDetails = () => {
   const { id } = useParams();
   const theme = useTheme();
+  const queryClient = useQueryClient();
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: "",
@@ -58,14 +68,27 @@ const InfluencerDetails = () => {
     },
   });
 
+  const updateInfluencerTypeMutation = useMutation({
+    mutationFn: ({ id, type }) =>
+      apiService.patch(`user/influencertype/${id}/${type}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries(["user", id]);
+      toast.success("Influencer type updated successfully");
+    },
+    onError: () => {
+      toast.error("Failed to update influencer type");
+    },
+  });
+
   const handleApprove = async () => {
     try {
       await apiService.post(`admin/users/${id}/approve`);
       setConfirmDialog({ open: false, title: "", action: null });
       toast.success("Influencer approved successfully");
-      user.approved = true;
+      queryClient.invalidateQueries(["user", id]);
     } catch (error) {
       console.error("Error approving influencer:", error);
+      toast.error("Failed to approve influencer");
     }
   };
 
@@ -74,23 +97,30 @@ const InfluencerDetails = () => {
       await apiService.post(`admin/users/${id}/block`);
       setConfirmDialog({ open: false, title: "", action: null });
       toast.success("Influencer suspended successfully");
-      user.approved = false;
+      queryClient.invalidateQueries(["user", id]);
     } catch (error) {
       console.error("Error suspending influencer:", error);
+      toast.error("Failed to suspend influencer");
     }
   };
 
   const handleDelete = async () => {
     try {
-      const newuser = await apiService.delete(`user/${id}`);
+      await apiService.delete(`user/${id}`);
       setConfirmDialog({ open: false, title: "", action: null });
-      user.name = newuser.name;
-      user.email = newuser.email;
-      user.photo = newuser.photo;
       toast.success("User Deleted Successfully");
+      queryClient.invalidateQueries(["user", id]);
     } catch (error) {
-      console.error("Error suspending influencer:", error);
+      console.error("Error deleting influencer:", error);
+      toast.error("Failed to delete influencer");
     }
+  };
+
+  const handleInfluencerTypeChange = (event) => {
+    updateInfluencerTypeMutation.mutate({
+      id,
+      type: event.target.value,
+    });
   };
 
   const openConfirmDialog = (title, action) => {
@@ -132,8 +162,11 @@ const InfluencerDetails = () => {
       }}
     >
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        {/* Header Card */}
-        <Card sx={{ mb: 4, borderRadius: 3, boxShadow: theme.shadows[3] }}>
+        {/* Profile Header */}
+        <Paper
+          elevation={3}
+          sx={{ mb: 4, borderRadius: 3, overflow: "hidden" }}
+        >
           <Box
             sx={{
               p: 4,
@@ -156,76 +189,104 @@ const InfluencerDetails = () => {
                 />
               </Grid>
               <Grid item xs>
-                <Typography variant="h4" fontWeight={600}>
-                  {user.name}
-                </Typography>
-                <Typography
-                  variant="subtitle1"
-                  color="text.secondary"
-                  sx={{ mt: 1 }}
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}
                 >
-                  {user.role}
+                  <Typography variant="h4" fontWeight={600}>
+                    {user.name}
+                  </Typography>
                   <Chip
                     label={user.approved ? "Approved" : "Pending"}
                     color={user.approved ? "success" : "warning"}
                     size="small"
-                    sx={{ ml: 1 }}
                   />
+                  {user.influencerCategory && (
+                    <Chip
+                      icon={<StarIcon />}
+                      label={user.influencerCategory.toUpperCase()}
+                      color="primary"
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+                <Typography
+                  variant="subtitle1"
+                  color="text.secondary"
+                  gutterBottom
+                >
+                  {user.role}
                 </Typography>
+                <FormControl sx={{ mt: 2, minWidth: 200 }}>
+                  <InputLabel>Influencer Type</InputLabel>
+                  <Select
+                    value={user.infuencerCategory || ""}
+                    onChange={handleInfluencerTypeChange}
+                    label="Influencer Type"
+                  >
+                    {influencerTypes.map((type) => (
+                      <MenuItem
+                        key={type}
+                        value={type}
+                        sx={{ textTransform: "capitalize" }}
+                      >
+                        {type}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
               </Grid>
               <Grid item>
-                {!user?.approved && (
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<BsCheckCircleFill />}
-                    onClick={() =>
-                      openConfirmDialog(
-                        "Are you sure you want to approve this influencer?",
-                        handleApprove
-                      )
-                    }
-                  >
-                    {" "}
-                    Approve
-                  </Button>
-                )}
-                {user?.approved && (
+                <Stack direction="row" spacing={2}>
+                  {!user?.approved && (
+                    <Button
+                      variant="contained"
+                      color="success"
+                      startIcon={<BsCheckCircleFill />}
+                      onClick={() =>
+                        openConfirmDialog(
+                          "Are you sure you want to approve this influencer?",
+                          handleApprove
+                        )
+                      }
+                    >
+                      Approve
+                    </Button>
+                  )}
+                  {user?.approved && (
+                    <Button
+                      variant="contained"
+                      color="error"
+                      startIcon={<Block />}
+                      onClick={() =>
+                        openConfirmDialog(
+                          "Are you sure you want to suspend this influencer?",
+                          handleSuspend
+                        )
+                      }
+                    >
+                      Suspend
+                    </Button>
+                  )}
                   <Button
                     variant="contained"
                     color="error"
-                    startIcon={<Block />}
+                    startIcon={<Delete />}
                     onClick={() =>
                       openConfirmDialog(
-                        "Are you sure you want to suspend this influencer?",
-                        handleSuspend
+                        "Are you sure you want to delete this influencer?",
+                        handleDelete
                       )
                     }
                   >
-                    Suspend
+                    Delete
                   </Button>
-                )}
-                &nbsp;
-                <Button
-                  variant="contained"
-                  color="error"
-                  startIcon={<Delete />}
-                  onClick={() =>
-                    openConfirmDialog(
-                      "Are you sure you want to delete this influencer?",
-                      handleDelete
-                    )
-                  }
-                >
-                  Delete
-                </Button>
+                </Stack>
               </Grid>
             </Grid>
           </Box>
-        </Card>
+        </Paper>
 
         <Grid container spacing={3}>
-          {/* Basic Information */}
           <Grid item xs={12} md={6}>
             <Card
               sx={{
@@ -262,12 +323,15 @@ const InfluencerDetails = () => {
                     </Box>
                   )}
                   <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <GenderIcon sx={{ mr: 1, color: "text.secondary" }} />
+                    <BsGenderAmbiguous
+                      sx={{ mr: 1, color: "text.secondary" }}
+                    />
+                    &nbsp;
                     <Typography>{user.gender}</Typography>
                   </Box>
                   {user.category && (
                     <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <CategoryIcon sx={{ mr: 1, color: "text.secondary" }} />
+                      <Category sx={{ mr: 1, color: "text.secondary" }} />
                       <Typography>{user.category.name}</Typography>
                     </Box>
                   )}
@@ -276,7 +340,7 @@ const InfluencerDetails = () => {
             </Card>
           </Grid>
 
-          {/* Social Media Links */}
+          {/* Social Media */}
           <Grid item xs={12} md={6}>
             <Card
               sx={{
@@ -287,7 +351,7 @@ const InfluencerDetails = () => {
             >
               <CardContent sx={{ p: 3 }}>
                 <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                  Social Media
+                  Social Media Profiles
                 </Typography>
                 <Divider sx={{ mb: 3 }} />
                 <Stack direction="row" spacing={2} flexWrap="wrap">
@@ -404,7 +468,7 @@ const InfluencerDetails = () => {
             </Card>
           </Grid>
 
-          {/* Shop Information if user is a shop owner */}
+          {/* Shop Information */}
           {user.owen && (
             <Grid item xs={12}>
               <Card sx={{ borderRadius: 3, boxShadow: theme.shadows[3] }}>
@@ -485,7 +549,7 @@ const InfluencerDetails = () => {
           )}
         </Grid>
       </Container>
-      {/* Confirmation Dialog */}
+
       <Dialog
         open={confirmDialog.open}
         onClose={() =>

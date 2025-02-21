@@ -22,6 +22,7 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  Alert,
 } from "@mui/material";
 import {
   CalendarToday,
@@ -39,6 +40,7 @@ import {
   AccessTime,
   ArrowBackIos,
   ArrowForwardIos,
+  Comment as CommentIcon,
 } from "@mui/icons-material";
 import AnimatedLoader from "../../components/loaders/AnimatedLoader";
 import { motion } from "framer-motion";
@@ -228,6 +230,33 @@ const CouponDetails = () => {
           >
             <Grid container spacing={4}>
               <Grid item xs={12}>
+                <Box sx={{ mb: 3 }}>
+                  {coupon.status === "re_submission_requested" &&
+                    coupon.adminComment && (
+                      <Alert
+                        severity="warning"
+                        icon={<CommentIcon />}
+                        sx={{
+                          mb: 2,
+                          "& .MuiAlert-message": {
+                            width: "100%",
+                          },
+                        }}
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={600}
+                          gutterBottom
+                        >
+                          Admin Comment:
+                        </Typography>
+                        <Typography variant="body1">
+                          {coupon.adminComment}
+                        </Typography>
+                      </Alert>
+                    )}
+                </Box>
+
                 <Grid container spacing={4}>
                   <Grid item xs={12} md={6}>
                     <Card
